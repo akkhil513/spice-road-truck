@@ -1,20 +1,12 @@
 package com.spiceroad.api;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.spiceroad.entity.Dish;
 import com.spiceroad.service.DishService;
 
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -27,18 +19,23 @@ public class DishResource {
     DishService dishService;
 
     @GET
-    public List<Dish> getDishes() {
+    public List<Dish> getDishes(@QueryParam("category") String category) {
+        if (category != null && !category.isBlank()) {
+            return dishService.getDishesByCategory(category);
+        }
         return dishService.getAllDishes();
     }
 
     @GET
     @Path("/{id}")
-    public Dish getDishById(@PathParam("id") Long id) {
+    public Response getDishById(@PathParam("id") Long id) {
         Dish dish = dishService.getDish(id);
         if (dish == null) {
-            throw new RuntimeException("Dish not found with id: " + id);  
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("{\"error\":\"Dish not found with id: " + id + "\"}")
+                    .build();
         }
-        return dish;
+        return Response.ok(dish).build();
     }
 
     @POST
@@ -53,9 +50,8 @@ public class DishResource {
         Dish updatedDish = dishService.updateDish(id, dish);
         if (updatedDish != null) {
             return Response.ok(updatedDish).build();
-        } else {
-            return Response.status(Response.Status.NOT_FOUND).build();
         }
+        return Response.status(Response.Status.NOT_FOUND).build();
     }
 
     @DELETE
@@ -64,9 +60,8 @@ public class DishResource {
         boolean deleted = dishService.deleteDish(id);
         if (deleted) {
             return Response.noContent().build();
-        } else {
-            return Response.status(Response.Status.NOT_FOUND).build();
         }
+        return Response.status(Response.Status.NOT_FOUND).build();
     }
 
 }

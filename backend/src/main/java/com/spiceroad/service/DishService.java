@@ -19,13 +19,16 @@ public class DishService {
         return dishRepository.listAll();
     }
 
+    public List<Dish> getDishesByCategory(String category) {
+        return dishRepository.list("category", category);
+    }
+
     public Dish getDish(Long id) {
         return dishRepository.findById(id);
     }
 
     @Transactional
     public Dish createDish(Dish dish) {
-        // ensure the entity is treated as new by Hibernate
         dish.id = null;
         dishRepository.persist(dish);
         return dish;
@@ -34,14 +37,13 @@ public class DishService {
     @Transactional
     public Dish updateDish(Long id, Dish updated) {
         Dish dish = dishRepository.findById(id);
-
-        if (dish == null) {
-            return null;
-        }
+        if (dish == null) return null;
 
         dish.name = updated.name;
         dish.description = updated.description;
         dish.price = updated.price;
+        dish.category = updated.category;
+        dish.imageUrl = updated.imageUrl;
 
         return dish;
     }
