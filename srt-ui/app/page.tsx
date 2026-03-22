@@ -71,7 +71,7 @@ const stats = [
 ];
 
 export default function Home() {
-  const [scrollY, setScrollY] = useState(0);
+  const [, setScrollY] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -84,15 +84,19 @@ export default function Home() {
 
       {/* ── HERO ── */}
       <section className="relative min-h-screen bg-[#1A1A1A] flex items-center overflow-hidden">
+
         {/* Background pattern */}
-        <div className="absolute inset-0 opacity-10"
+        <div
+          className="absolute inset-0 opacity-10"
           style={{
             backgroundImage: `radial-gradient(circle at 20% 50%, #C0392B 0%, transparent 50%),
                               radial-gradient(circle at 80% 20%, #E67E22 0%, transparent 40%)`,
-          }} />
+          }}
+        />
 
         <div className="relative max-w-7xl mx-auto px-4 py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left */}
+
+          {/* Left — Text */}
           <div>
             <div className="inline-flex items-center gap-2 bg-[#C0392B]/20 border border-[#C0392B]/40 rounded-full px-4 py-1.5 mb-6">
               <span className="text-[#E67E22] text-sm font-semibold">🌶️ Now Serving Atlanta</span>
@@ -109,40 +113,40 @@ export default function Home() {
               Live tandoor grill, Frankies, wings, biryani and so much more.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link href="/menu"
-                className="bg-[#C0392B] hover:bg-[#E67E22] text-white px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-[#C0392B]/40 hover:shadow-xl">
+              <Link
+                href="/menu"
+                className="bg-[#C0392B] hover:bg-[#E67E22] text-white px-8 py-3 rounded-full font-bold text-lg transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
+              >
                 Explore Menu <ChevronRight size={20} />
               </Link>
-              <Link href="/order"
-                className="border-2 border-white/30 hover:border-[#E67E22] text-white hover:text-[#E67E22] px-8 py-3 rounded-full font-bold text-lg transition-all duration-300">
+              <Link
+                href="/order"
+                className="border-2 border-white/30 hover:border-[#E67E22] text-white hover:text-[#E67E22] px-8 py-3 rounded-full font-bold text-lg transition-all duration-300"
+              >
                 Order Online
               </Link>
             </div>
           </div>
 
-          {/* Right — decorative food card */}
-          <div className="hidden lg:flex justify-center">
-            <div className="relative">
-              <div className="w-80 h-80 bg-gradient-to-br from-[#C0392B] to-[#E67E22] rounded-3xl rotate-6 opacity-20 absolute inset-0" />
-              <div className="relative w-80 h-80 bg-[#2A2A2A] rounded-3xl border border-white/10 flex flex-col items-center justify-center gap-4 p-8">
-                <div className="text-8xl">🌮</div>
-                <p className="text-white text-xl font-bold text-center">Indo-American Fusion</p>
-                <p className="text-gray-400 text-sm text-center">Tandoor · Biryani · Wings · Frankies</p>
-                <div className="flex gap-1">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} size={16} fill="#F39C12" stroke="none" className="text-[#F39C12]" />
-                  ))}
-                </div>
-              </div>
+          {/* Right — Food Truck */}
+          <div className="hidden lg:flex justify-center items-center">
+            <img
+              src="/images/hero/truck.png"
+              alt="Spice Road Truck"
+              className="w-full max-w-lg object-contain"
+              style={{
+                filter: 'drop-shadow(0 20px 40px rgba(192,57,43,0.6))',
+              }}
+            />
+          </div>
+
+          {/* Scroll indicator */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+            <div className="w-6 h-10 border-2 border-white/30 rounded-full flex items-start justify-center p-1">
+              <div className="w-1 h-3 bg-white/50 rounded-full" />
             </div>
           </div>
-        </div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-white/30 rounded-full flex items-start justify-center p-1">
-            <div className="w-1 h-3 bg-white/50 rounded-full" />
-          </div>
         </div>
       </section>
 
@@ -167,11 +171,12 @@ export default function Home() {
             <h2 className="text-4xl font-black text-[#1A1A1A] mt-2">Weekly Schedule</h2>
             <p className="text-gray-500 mt-2">Come find us at these locations every week</p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {scheduleData.map((item, i) => (
-              <div key={i}
-                className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+              <div
+                key={i}
+                className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-100"
+              >
                 <div className="w-12 h-12 bg-[#C0392B]/10 rounded-xl flex items-center justify-center mb-4">
                   <span className="text-2xl">📍</span>
                 </div>
@@ -193,12 +198,13 @@ export default function Home() {
       {/* ── ABOUT US ── */}
       <section className="py-20 bg-[#1A1A1A]">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          {/* Left decorative */}
+
+          {/* Left */}
           <div className="relative">
             <div className="bg-[#C0392B]/10 border border-[#C0392B]/20 rounded-3xl p-10 text-center">
               <div className="text-9xl mb-6">🍛</div>
               <blockquote className="text-gray-300 text-lg italic leading-relaxed">
-                "A culinary gem in Atlanta, known for its vibrant blend of Indian fusion and authentic classics."
+                &quot;A culinary gem in Atlanta, known for its vibrant blend of Indian fusion and authentic classics.&quot;
               </blockquote>
             </div>
             <div className="absolute -top-4 -right-4 bg-[#E67E22] text-white text-xs font-bold px-3 py-1.5 rounded-full">
@@ -224,16 +230,21 @@ export default function Home() {
               housewarmings, and corporate functions all over Atlanta.
             </p>
             <div className="flex gap-4">
-              <Link href="/menu"
-                className="bg-[#C0392B] hover:bg-[#E67E22] text-white px-6 py-3 rounded-full font-semibold transition-colors">
+              <Link
+                href="/menu"
+                className="bg-[#C0392B] hover:bg-[#E67E22] text-white px-6 py-3 rounded-full font-semibold transition-colors"
+              >
                 See Our Menu
               </Link>
-              <Link href="/catering"
-                className="border border-white/30 hover:border-[#E67E22] text-white hover:text-[#E67E22] px-6 py-3 rounded-full font-semibold transition-colors">
+              <Link
+                href="/catering"
+                className="border border-white/30 hover:border-[#E67E22] text-white hover:text-[#E67E22] px-6 py-3 rounded-full font-semibold transition-colors"
+              >
                 Book Catering
               </Link>
             </div>
           </div>
+
         </div>
       </section>
 
@@ -245,18 +256,21 @@ export default function Home() {
             <h2 className="text-4xl font-black text-[#1A1A1A] mt-2">Catering Services</h2>
             <p className="text-gray-500 mt-2">We bring the flavors to your event</p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((service, i) => (
-              <div key={i}
-                className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 group">
+              <div
+                key={i}
+                className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 group"
+              >
                 <div className="text-4xl mb-4">{service.emoji}</div>
                 <h3 className="font-black text-[#1A1A1A] text-xl mb-2 group-hover:text-[#C0392B] transition-colors">
                   {service.title}
                 </h3>
                 <p className="text-gray-500 text-sm leading-relaxed mb-4">{service.description}</p>
-                <Link href="/catering"
-                  className="text-[#C0392B] font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all">
+                <Link
+                  href="/catering"
+                  className="text-[#C0392B] font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all"
+                >
                   Request to Book <ChevronRight size={16} />
                 </Link>
               </div>
@@ -275,12 +289,16 @@ export default function Home() {
             Browse our full menu and place your order online. Pickup ready in 30 minutes.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <Link href="/order"
-              className="bg-white text-[#C0392B] hover:bg-[#FFF8F0] px-8 py-3 rounded-full font-bold text-lg transition-colors shadow-lg">
+            <Link
+              href="/order"
+              className="bg-white text-[#C0392B] hover:bg-[#FFF8F0] px-8 py-3 rounded-full font-bold text-lg transition-colors shadow-lg"
+            >
               Order Now
             </Link>
-            <Link href="/menu"
-              className="border-2 border-white text-white hover:bg-white/10 px-8 py-3 rounded-full font-bold text-lg transition-colors">
+            <Link
+              href="/menu"
+              className="border-2 border-white text-white hover:bg-white/10 px-8 py-3 rounded-full font-bold text-lg transition-colors"
+            >
               View Menu
             </Link>
           </div>
