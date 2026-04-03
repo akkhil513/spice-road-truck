@@ -96,7 +96,7 @@ Resources:
       MemorySize: 512
       Code:
         S3Bucket: srt-deployments-bucket
-        S3Key: !Sub lambda/srt-backend-${Environment}.jar
+        S3Key: !Sub lambda/srt-backend-dev.zip
       Environment:
         Variables:
           TABLE_NAME: !Ref DishesTable
