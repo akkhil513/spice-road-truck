@@ -89,8 +89,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub srt-dishes-lambda-${Environment}
-      Runtime: java17
-      Handler: com.spiceroad.LambdaHandler::handleRequest
+      Runtime: java21
+      Handler: io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 30
       MemorySize: 512
