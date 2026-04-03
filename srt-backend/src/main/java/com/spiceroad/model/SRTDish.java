@@ -1,6 +1,7 @@
 package com.spiceroad.model;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,10 +27,12 @@ public class SRTDish {
     String imageUrl;
 
     @DynamoDbPartitionKey
+    @JsonIgnore
     public String  getPk() {
         return pk;
     }
     @DynamoDbSortKey
+    @JsonIgnore
     public String  getSk() {
         return sk;
     }
