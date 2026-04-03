@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: SRT Backend Template
+
+Parameters:
+  Environment:
+    Type: String
+    Description: The environment to deploy to (e.g., dev, prod)
+    AllowedValues:
+      - dev
+      - prod
+
+Conditions:
+  IsProd: !Equals [ !Ref Environment, prod ]
+
+Resources:
+  DishesTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    Properties:
+      TableName: !Sub srt-dishes-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: category
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: category-index
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+            - AttributeName: sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub srt-lambda-execution-role-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaDynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt DishesTable.Arn
+                  - !Sub '${DishesTable.Arn}/index/*'
+        - PolicyName: CloudWatchLogsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/srt-backend-${Environment}
+      RetentionInDays: !If [ IsProd, 2, 1 ]
+
+  SRTDishesLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub srt-dishes-lambda-${Environment}
+      Runtime: java17
+      Handler: com.spiceroad.LambdaHandler::handleRequest
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 512
+      Code:
+        S3Bucket: srt-deployments-bucket
+        S3Key: !Sub lambda/srt-backend-${Environment}.jar
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref DishesTable
+          ENVIRONMENT: !Ref Environment
+
+  ApiGateway:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+        Name: !Sub srt-api-${Environment}
+        ProtocolType: HTTP
+        CorsConfiguration:
+            AllowOrigins:
+                - '*'
+            AllowMethods:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+                - OPTIONS
+            AllowHeaders:
+                - '*'
+
+  LambdaIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt SRTDishesLambdaFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  GetDishesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'GET /srt/v1/dishes'
+      Target: !Sub integrations/${LambdaIntegration}
+
+  GetDishByIdRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'GET /srt/v1/dishes/{id}'
+      Target: !Sub integrations/${LambdaIntegration}
+
+  PostDishesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /srt/v1/dishes'
+      Target: !Sub integrations/${LambdaIntegration}
+
+  PutDishesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'PUT /srt/v1/dishes/{id}'
+      Target: !Sub integrations/${LambdaIntegration}
+
+  DeleteDishesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'DELETE /srt/v1/dishes/{id}'
+      Target: !Sub integrations/${LambdaIntegration}
+
+  ApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref ApiGateway
+      StageName: !Sub ${Environment}
+      AutoDeploy: true
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SRTDishesLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*/srt/v1/dishes*
+
+Outputs:
+  DishesTableName:
+    Description: The name of the DynamoDB table for dishes
+    Value: !GetAtt DishesTable.Arn
+    Export:
+      Name: !Sub srt-dishes-table-name-${Environment}-arn
+
+  TableArn:
+    Description: The ARN of the DynamoDB table for dishes
+    Value: !GetAtt DishesTable.Arn
+    Export:
+      Name: !Sub srt-dishes-table-arn-${Environment}
+
+  ApiEndpoint:
+    Description: The endpoint of the API Gateway
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+    Export:
+      Name: !Sub srt-api-endpoint-${Environment}
+
+  LambdaArn:
+    Description: The ARN of the Lambda function
+    Value: !GetAtt SRTDishesLambdaFunction.Arn
+    Export:
+      Name: !Sub srt-lambda-arn-${Environment}

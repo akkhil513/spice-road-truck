@@ -1,0 +1,7 @@
+/Users/akkhil/spice-road-truck/srt-backend/src/main/java/com/spiceroad/LambdaHandler.java
+/Users/akkhil/spice-road-truck/srt-backend/src/main/java/com/spiceroad/api/DishResource.java
+/Users/akkhil/spice-road-truck/srt-backend/src/main/java/com/spiceroad/config/DynamoDbConfig.java
+/Users/akkhil/spice-road-truck/srt-backend/src/main/java/com/spiceroad/constant/DishConstants.java
+/Users/akkhil/spice-road-truck/srt-backend/src/main/java/com/spiceroad/model/SRTDish.java
+/Users/akkhil/spice-road-truck/srt-backend/src/main/java/com/spiceroad/repository/SRTDishRepository.java
+/Users/akkhil/spice-road-truck/srt-backend/src/main/java/com/spiceroad/service/DishService.java

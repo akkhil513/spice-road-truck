@@ -1,0 +1,7 @@
+com/spiceroad/service/DishService.class
+com/spiceroad/model/SRTDish.class
+com/spiceroad/model/SRTDish$SRTDishBuilder.class
+com/spiceroad/config/DynamoDbConfig.class
+com/spiceroad/api/DishResource.class
+com/spiceroad/constant/DishConstants.class
+com/spiceroad/repository/SRTDishRepository.class

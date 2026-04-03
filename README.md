@@ -1,6 +1,6 @@
 # 🌶️ Spice Road Truck
 
-A full-stack food truck platform for managing a digital menu of dishes. The backend is a RESTful API built with **Quarkus** (Java 17), backed by **PostgreSQL** on **AWS RDS**, with optional **AWS Secrets Manager** integration for credential management.
+A full-stack food truck platform for **Spice Road Truck** — an Indo-American street food business in Atlanta, GA. The project consists of a **Next.js 16** frontend (`srt-ui`) and a **Quarkus 3** REST API backend, backed by **PostgreSQL on AWS RDS**.
 
 ---
 
@@ -9,61 +9,63 @@ A full-stack food truck platform for managing a digital menu of dishes. The back
 - [Architecture Overview](#architecture-overview)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
-- [File-by-File Breakdown](#file-by-file-breakdown)
-  - [Root](#root)
-  - [Backend – Build & Config](#backend--build--config)
-  - [Backend – Source Code](#backend--source-code)
-  - [Backend – Resources](#backend--resources)
-  - [Backend – Docker](#backend--docker)
-  - [Backend – Build Output](#backend--build-output)
+- [Frontend (srt-ui)](#frontend-srt-ui)
+  - [Pages](#pages)
+  - [Components](#components)
+  - [Lib](#lib)
+  - [Config Files](#frontend-config-files)
+  - [Public Assets](#public-assets)
+- [Backend](#backend)
+  - [Source Code](#backend-source-code)
+  - [Resources](#backend-resources)
+  - [Docker](#docker)
+  - [Build Config](#backend-build-config)
 - [API Reference](#api-reference)
 - [Getting Started](#getting-started)
-- [Docker Deployment](#docker-deployment)
 - [Configuration](#configuration)
+- [Git & IDE Notes](#git--ide-notes)
 
 ---
 
 ## Architecture Overview
 
 ```
-┌──────────────┐       HTTP/JSON        ┌─────────────────────┐       JDBC        ┌──────────────┐
-│              │  ───────────────────▶   │   Quarkus Backend   │  ──────────────▶   │  PostgreSQL  │
-│    Client    │                         │   (JAX-RS + CDI)    │                    │  (AWS RDS)   │
-│              │  ◀───────────────────   │                     │  ◀──────────────   │              │
-└──────────────┘                         └─────────────────────┘                    └──────────────┘
-                                                  │
-                                                  │ (optional)
-                                                  ▼
-                                         ┌─────────────────────┐
-                                         │  AWS Secrets Manager │
-                                         └─────────────────────┘
+┌─────────────────┐       HTTP        ┌──────────────────────┐       JDBC        ┌──────────────┐
+│   Next.js 16    │  ──────────────▶  │   Quarkus Backend    │  ──────────────▶  │  PostgreSQL  │
+│   (srt-ui)      │                   │   (JAX-RS + CDI)     │                   │  (AWS RDS)   │
+│   React 19      │  ◀──────────────  │   Port 8080          │  ◀──────────────  │              │
+│   Port 3000     │                   │                      │                   └──────────────┘
+└─────────────────┘                   └──────────────────────┘
+                                               │
+                                               │ (optional)
+                                               ▼
+                                      ┌──────────────────────┐
+                                      │  AWS Secrets Manager  │
+                                      └──────────────────────┘
 ```
 
-The backend follows a clean **three-layer architecture**:
+The backend follows a **three-layer architecture**:
 
-1. **API Layer** (`api/`) – JAX-RS REST resources that handle HTTP requests/responses.
-2. **Service Layer** (`service/`) – Business logic and transaction management.
-3. **Repository Layer** (`repository/`) – Data access via Hibernate ORM with Panache.
-4. **Entity Layer** (`entity/`) – JPA entity definitions mapping to database tables.
+1. **API Layer** (`api/`) — JAX-RS REST resources handling HTTP requests/responses.
+2. **Service Layer** (`service/`) — Business logic and transaction management.
+3. **Repository Layer** (`repository/`) — Data access via Hibernate ORM with Panache.
+4. **Entity Layer** (`entity/`) — JPA entity definitions mapping to database tables.
 
 ---
 
 ## Tech Stack
 
-| Component              | Technology                                  |
-| ---------------------- | ------------------------------------------- |
-| **Language**           | Java 17                                     |
-| **Framework**          | Quarkus 3.19.2                              |
-| **REST**               | Quarkus REST (Jakarta RESTful Web Services) |
-| **ORM**                | Hibernate ORM with Panache                  |
-| **Database**           | PostgreSQL (AWS RDS)                        |
-| **Serialization**      | Jackson (via `quarkus-rest-jackson`)        |
-| **API Docs**           | SmallRye OpenAPI + Swagger UI               |
-| **Secrets Management** | AWS Secrets Manager (Quarkiverse 2.16.0)    |
-| **DI**                 | Quarkus Arc (CDI)                           |
-| **Build Tool**         | Apache Maven (with Maven Wrapper)           |
-| **Containerization**   | Docker (JVM, Legacy JAR, Native, Native Micro) |
-| **Testing**            | JUnit 5, REST Assured                       |
+| Layer        | Technology                                                      |
+| ------------ | --------------------------------------------------------------- |
+| **Frontend** | Next.js 16, React 19, TypeScript 5, Tailwind CSS 4             |
+| **Icons**    | Lucide React                                                    |
+| **Email**    | EmailJS (newsletter subscription)                               |
+| **Backend**  | Quarkus 3.19.2, Java 17, JAX-RS (REST), CDI (Dependency Inj.)  |
+| **ORM**      | Hibernate ORM with Panache                                      |
+| **Database** | PostgreSQL (AWS RDS)                                            |
+| **Secrets**  | AWS Secrets Manager (via Quarkiverse extension)                 |
+| **Docs**     | SmallRye OpenAPI + Swagger UI                                   |
+| **Build**    | Maven (backend), npm (frontend)                                 |
 
 ---
 
@@ -71,212 +73,255 @@ The backend follows a clean **three-layer architecture**:
 
 ```
 spice-road-truck/
-├── README.md                          # This file – project documentation
-├── backend/
-│   ├── pom.xml                        # Maven project descriptor (dependencies, plugins, build config)
-│   ├── mvnw                           # Maven Wrapper script (Unix/macOS)
-│   ├── mvnw.cmd                       # Maven Wrapper script (Windows)
+├── README.md                          # This file — project documentation
+├── .gitignore                         # Root gitignore (.idea, .DS_Store, .vscode)
+│
+├── srt-ui/                            # ── FRONTEND (Next.js 16 + React 19) ──
+│   ├── package.json                   # Dependencies & scripts
+│   ├── package-lock.json              # Lockfile
+│   ├── next.config.ts                 # Next.js configuration
+│   ├── tsconfig.json                  # TypeScript compiler options
+│   ├── eslint.config.mjs              # ESLint flat config (Next.js + TS)
+│   ├── postcss.config.mjs             # PostCSS with Tailwind CSS 4
+│   ├── next-env.d.ts                  # Next.js TypeScript declarations
+│   ├── .gitignore                     # Frontend gitignore (node_modules, .next, .env)
+│   │
+│   ├── app/                           # Next.js App Router pages
+│   │   ├── layout.tsx                 # Root layout (Navbar + Footer wrapper)
+│   │   ├── page.tsx                   # Home page (hero, stats, schedule, about, services, CTA)
+│   │   ├── globals.css                # Global styles (Tailwind import + base colors)
+│   │   ├── favicon.ico                # Favicon
+│   │   ├── menu/page.tsx              # Menu page (fetches dishes from API, category filter)
+│   │   ├── order/page.tsx             # Order page (Coming Soon placeholder)
+│   │   ├── catering/page.tsx          # Catering page (Coming Soon placeholder)
+│   │   ├── contact/page.tsx           # Contact page (form, hours, address, socials)
+│   │   └── admin/                     # Admin section (empty — future feature)
+│   │
+│   ├── components/                    # Shared React components
+│   │   ├── Navbar.tsx                 # Fixed top nav with mobile hamburger menu
+│   │   ├── Footer.tsx                 # Footer with links, contact, EmailJS newsletter
+│   │   └── ComingSoon.tsx             # Animated "Coming Soon" placeholder page
+│   │
+│   ├── lib/                           # Utility / API layer
+│   │   └── api.ts                     # Typed fetch functions for Dish CRUD
+│   │
+│   └── public/                        # Static assets
+│       ├── srt-logo-dark.svg          # Logo SVG
+│       └── images/
+│           ├── hero/
+│           │   ├── truck.png          # Truck image used in hero & ComingSoon
+│           │   ├── food-truck.jpg     # Photo used on contact page
+│           │   └── image.png          # Additional hero image
+│           └── logo/
+│               └── srt-logo-dark.svg  # Logo copy for components
+│
+├── backend/                           # ── BACKEND (Quarkus 3 + Java 17) ──
+│   ├── pom.xml                        # Maven POM (dependencies, plugins, Quarkus BOM)
+│   ├── mvnw                           # Maven Wrapper (Unix)
+│   ├── mvnw.cmd                       # Maven Wrapper (Windows)
 │   ├── README.md                      # Quarkus-generated backend README
-│   └── src/
-│       └── main/
-│           ├── java/com/spiceroad/
-│           │   ├── api/
-│           │   │   └── DishResource.java       # REST controller – HTTP endpoints for dishes
-│           │   ├── service/
-│           │   │   └── DishService.java        # Business logic – CRUD operations on dishes
-│           │   ├── repository/
-│           │   │   └── DishRepository.java     # Data access – Panache repository for Dish entity
-│           │   └── entity/
-│           │       └── Dish.java               # JPA entity – maps to the "dish" database table
-│           ├── resources/
-│           │   └── application.properties      # Application configuration (DB, Hibernate, OpenAPI)
-│           └── docker/
-│               ├── Dockerfile.jvm              # Docker image for JVM mode
-│               ├── Dockerfile.legacy-jar       # Docker image for legacy JAR mode
-│               ├── Dockerfile.native           # Docker image for native executable (UBI 9 minimal)
-│               └── Dockerfile.native-micro     # Docker image for native executable (micro image)
+│   ├── .gitignore                     # Backend gitignore (target/, .idea, .env)
+│   │
+│   ├── src/main/java/com/spiceroad/
+│   │   ├── api/
+│   │   │   └── DishResource.java      # REST controller — /srt/v1/dishes endpoints
+│   │   ├── service/
+│   │   │   └── DishService.java       # Business logic — CRUD operations on dishes
+│   │   ├── repository/
+│   │   │   └── DishRepository.java    # Panache repository for Dish entity
+│   │   └── entity/
+│   │       └── Dish.java              # JPA entity — maps to "dish" table
+│   │
+│   ├── src/main/resources/
+│   │   └── application.properties     # Quarkus config (DB, CORS, Swagger, Hibernate)
+│   │
+│   ├── src/main/docker/               # Docker build files
+│   │   ├── Dockerfile.jvm             # JVM-based Docker image
+│   │   ├── Dockerfile.legacy-jar      # Legacy JAR Docker image
+│   │   ├── Dockerfile.native          # Native binary Docker image
+│   │   └── Dockerfile.native-micro    # Micro native Docker image
+│   │
+│   └── target/                        # Maven build output (gitignored)
+│       └── quarkus-app/
+│           └── quarkus-run.jar        # Runnable application JAR
+│
+├── components/                        # (Empty — reserved for shared components)
+└── lib/                               # (Empty — reserved for shared libraries)
 ```
 
 ---
 
-## File-by-File Breakdown
+## Frontend (srt-ui)
 
-### Root
+The frontend is a **Next.js 16** app using the **App Router**, **React 19**, **TypeScript**, and **Tailwind CSS 4**.
 
-| File | Description |
-| ---- | ----------- |
-| **`README.md`** | Top-level project documentation (this file). Provides an overview of the architecture, tech stack, API reference, and instructions for building and running the application. |
+### Pages
 
-### Backend – Build & Config
+| Route        | File                          | Description                                                                                                                 |
+| ------------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `/`          | `app/page.tsx`                | **Home page** — Hero banner with truck image, stats bar (50+ items, 10K+ customers, 4.9 rating), weekly schedule, about us section, catering services grid, and CTA banner. |
+| `/menu`      | `app/menu/page.tsx`           | **Menu page** — Fetches all dishes from the backend API via `getAllDishes()`. Displays a sticky category filter bar and groups dishes into cards showing name, price, description, and image. |
+| `/order`     | `app/order/page.tsx`          | **Order page** — Uses `ComingSoon` component. Placeholder for future online ordering.                                       |
+| `/catering`  | `app/catering/page.tsx`       | **Catering page** — Uses `ComingSoon` component. Placeholder for future catering booking.                                   |
+| `/contact`   | `app/contact/page.tsx`        | **Contact page** — Contact info (phone, email, address), business hours, social links, and a contact form (currently simulated submission). |
+| `/admin`     | `app/admin/`                  | **Admin section** — Empty directory, reserved for future admin dashboard.                                                    |
 
-| File | Description |
-| ---- | ----------- |
-| **`backend/pom.xml`** | Maven POM file defining the project coordinates (`com.spiceroad:backend:1.0.0-SNAPSHOT`), Quarkus BOM (`3.19.2`), and all dependencies: `quarkus-rest`, `quarkus-rest-jackson`, `quarkus-smallrye-openapi`, `quarkus-hibernate-orm-panache`, `quarkus-jdbc-postgresql`, `quarkus-amazon-secretsmanager` (Quarkiverse `2.16.0`), `quarkus-arc`, plus test dependencies (`quarkus-junit5`, `rest-assured`). Configures Maven Compiler Plugin (Java 17), Surefire, Failsafe, and the Quarkus Maven Plugin for build, code generation, and test generation. |
-| **`backend/mvnw`** | Maven Wrapper shell script for Unix/macOS. Allows running Maven commands (`./mvnw ...`) without requiring a global Maven installation. Automatically downloads the correct Maven version. |
-| **`backend/mvnw.cmd`** | Maven Wrapper batch script for Windows. Windows equivalent of `mvnw`. |
-| **`backend/README.md`** | Auto-generated Quarkus README with instructions for running in dev mode (`./mvnw quarkus:dev`), packaging, building native executables, and links to Quarkus guides for Hibernate ORM Panache, SmallRye OpenAPI, REST, and PostgreSQL JDBC. |
+#### `app/layout.tsx` — Root Layout
+- Wraps all pages with `<Navbar />` on top and `<Footer />` at the bottom.
+- Uses **Geist** font from Google Fonts.
+- Sets page metadata: title "SRT — Indian Street Food Atlanta", favicon as `srt-logo-dark.svg`.
+- Adds `pt-16` padding to main content to account for the fixed navbar.
 
-### Backend – Source Code
+#### `app/globals.css` — Global Styles
+- Imports Tailwind CSS 4 via `@import "tailwindcss"`.
+- Sets base background color `#FFF8F0` (warm cream) and text color `#1A1A1A`.
+- Enables smooth scrolling.
 
-#### `backend/src/main/java/com/spiceroad/entity/Dish.java`
+### Components
 
-**JPA Entity – `Dish`**
+| Component          | File                          | Description                                                                                                  |
+| ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Navbar**         | `components/Navbar.tsx`       | Fixed top navigation bar. Dark theme (`#1A1A1A`). Shows logo + brand name, nav links (Home, Menu, Order Online, Catering, Contact), and a red "Order Now" CTA button. Responsive with a hamburger menu on mobile. |
+| **Footer**         | `components/Footer.tsx`       | Three-column footer: brand info with social links + **EmailJS newsletter subscription**, quick links, and contact details (phone, email, address). Uses `@emailjs/browser` to send welcome emails and admin notifications. |
+| **ComingSoon**     | `components/ComingSoon.tsx`   | Animated placeholder page with a CSS-animated truck driving across the screen, smoke puffs, and road dashes. Shows page title, message, and call/email CTA buttons. Used by Order and Catering pages. |
 
-- Extends `PanacheEntity` (provides auto-generated `id` field of type `Long` and built-in CRUD/query methods).
-- Mapped to the `dish` table in PostgreSQL.
-- **Fields:**
+### Lib
 
-  | Field | Type | Description |
-  | --- | --- | --- |
-  | `id` | `Long` | Primary key (inherited from `PanacheEntity`, auto-generated) |
-  | `name` | `String` | Name of the dish (e.g., "Butter Chicken Wrap") |
-  | `description` | `String` | Textual description of the dish |
-  | `price` | `double` | Price of the dish |
+| File            | Description                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| `lib/api.ts`    | Typed API client for the backend Dish REST API. Exports functions: `getAllDishes()`, `getDishesByCategory(category)`, `getDishById(id)`, `createDish(dish)`, `updateDish(id, dish)`, `deleteDish(id)`. Uses `NEXT_PUBLIC_API_URL` env var (defaults to `https://api.spiceroadtruck.com`). |
 
----
+### Frontend Config Files
 
-#### `backend/src/main/java/com/spiceroad/repository/DishRepository.java`
+| File                  | Purpose                                                         |
+| --------------------- | --------------------------------------------------------------- |
+| `package.json`        | Dependencies: `next@16.2.1`, `react@19.2.4`, `lucide-react`, `@emailjs/browser`. Dev: `tailwindcss@4`, `typescript@5`, `eslint`. Scripts: `dev`, `build`, `start`, `lint`. |
+| `next.config.ts`      | Configures allowed image domains: `api.spiceroadtruck.com`.     |
+| `tsconfig.json`       | TypeScript config: ES2017 target, bundler module resolution, `@/*` path alias for imports. |
+| `eslint.config.mjs`   | ESLint flat config with Next.js core web vitals + TypeScript rules. |
+| `postcss.config.mjs`  | PostCSS plugin: `@tailwindcss/postcss` for Tailwind CSS 4.      |
 
-**Panache Repository – `DishRepository`**
+### Public Assets
 
-- Annotated with `@ApplicationScoped` (CDI singleton bean).
-- Implements `PanacheRepository<Dish>`, which provides ready-made methods: `listAll()`, `findById()`, `persist()`, `deleteById()`, `count()`, `find()`, etc.
-- Currently contains no custom query methods – all standard CRUD is inherited from Panache.
-
----
-
-#### `backend/src/main/java/com/spiceroad/service/DishService.java`
-
-**Service Layer – `DishService`**
-
-- Annotated with `@ApplicationScoped` (CDI singleton bean).
-- Injects `DishRepository` via `@Inject`.
-- **Methods:**
-
-  | Method | Annotation | Description |
-  | --- | --- | --- |
-  | `getAllDishes()` | – | Returns `List<Dish>` of all dishes via `dishRepository.listAll()` |
-  | `getDish(Long id)` | – | Returns a single `Dish` by primary key, or `null` if not found |
-  | `createDish(Dish dish)` | `@Transactional` | Resets `dish.id` to `null` to ensure Hibernate treats it as a new entity, persists it, and returns the saved entity with generated ID |
-  | `updateDish(Long id, Dish updated)` | `@Transactional` | Finds existing dish by ID; if found, updates `name`, `description`, and `price` fields (dirty-checking auto-flushes changes); returns updated entity or `null` |
-  | `deleteDish(Long id)` | `@Transactional` | Deletes dish by ID; returns `true` if the entity existed and was deleted, `false` otherwise |
+| Path                                | Description                          |
+| ----------------------------------- | ------------------------------------ |
+| `public/srt-logo-dark.svg`         | Main SVG logo (used as favicon)      |
+| `public/images/logo/srt-logo-dark.svg` | Logo copy used in Navbar & Footer |
+| `public/images/hero/truck.png`     | Truck PNG for hero section (~558KB)  |
+| `public/images/hero/food-truck.jpg`| Food truck photo for contact page    |
+| `public/images/hero/image.png`     | Additional hero image (~458KB)       |
 
 ---
 
-#### `backend/src/main/java/com/spiceroad/api/DishResource.java`
+## Backend
 
-**REST Resource – `DishResource`**
+The backend is a **Quarkus 3.19.2** REST API using **Java 17**, **Hibernate ORM with Panache**, and **PostgreSQL**.
 
-- Base path: **`/srt/v1/dishes`**
-- Produces and consumes `application/json`.
-- Injects `DishService` via `@Inject`.
-- **Endpoints:**
+### Backend Source Code
 
-  | HTTP Method | Path | Method | Description | Success Response | Error Response |
-  | --- | --- | --- | --- | --- | --- |
-  | `GET` | `/srt/v1/dishes` | `getDishes()` | List all dishes | `200 OK` – JSON array of dishes | – |
-  | `GET` | `/srt/v1/dishes/{id}` | `getDishById(Long id)` | Get a single dish by ID | `200 OK` – JSON dish object | Throws `RuntimeException` if not found |
-  | `POST` | `/srt/v1/dishes` | `addDish(Dish dish)` | Create a new dish | `201 Created` – JSON saved dish | – |
-  | `PUT` | `/srt/v1/dishes/{id}` | `updateDish(Long id, Dish dish)` | Update an existing dish | `200 OK` – JSON updated dish | `404 Not Found` if ID doesn't exist |
-  | `DELETE` | `/srt/v1/dishes/{id}` | `deleteDish(Long id)` | Delete a dish by ID | `204 No Content` | `404 Not Found` if ID doesn't exist |
+All source code is under `src/main/java/com/spiceroad/`:
 
----
+#### `entity/Dish.java` — JPA Entity
+- Extends `PanacheEntity` (auto-generates `id` field).
+- Maps to the `dish` database table.
+- Fields: `name` (String), `description` (String, max 1000 chars), `price` (double), `category` (String), `imageUrl` (String).
 
-### Backend – Resources
+#### `repository/DishRepository.java` — Data Access
+- Implements `PanacheRepository<Dish>`.
+- `@ApplicationScoped` CDI bean.
+- Inherits all standard CRUD methods from Panache (`listAll`, `findById`, `persist`, `deleteById`, `list`).
 
-#### `backend/src/main/resources/application.properties`
+#### `service/DishService.java` — Business Logic
+- `@ApplicationScoped` CDI bean. Injects `DishRepository`.
+- Methods:
+  - `getAllDishes()` — returns all dishes.
+  - `getDishesByCategory(category)` — filters dishes by category.
+  - `getDish(id)` — finds a single dish by ID.
+  - `createDish(dish)` — persists a new dish (`@Transactional`).
+  - `updateDish(id, dish)` — updates all fields of an existing dish (`@Transactional`).
+  - `deleteDish(id)` — deletes a dish by ID (`@Transactional`).
 
-Central configuration file for the Quarkus application:
+#### `api/DishResource.java` — REST Controller
+- Base path: `/srt/v1/dishes`
+- Produces/consumes: `application/json`
+- Endpoints:
 
-| Property | Value | Purpose |
-| --- | --- | --- |
-| `quarkus.devservices.enabled` | `false` | Disables Quarkus Dev Services (no automatic Docker containers in dev mode) |
-| `quarkus.datasource.devservices.enabled` | `false` | Disables automatic datasource provisioning |
-| `quarkus.aws.region` | `us-east-1` | AWS region for Secrets Manager client |
-| `quarkus.datasource.username` | `admin_srt` | Database username (hardcoded; Secrets Manager alternative is commented out) |
-| `quarkus.datasource.password` | *(hardcoded)* | Database password (Secrets Manager alternative is commented out) |
-| `quarkus.datasource.db-kind` | `postgresql` | Database type |
-| `quarkus.datasource.jdbc.url` | `jdbc:postgresql://...rds.amazonaws.com:5432/srt_db` | JDBC connection URL pointing to AWS RDS PostgreSQL |
-| `quarkus.hibernate-orm.database.generation` | `update` | Hibernate auto-DDL strategy – updates schema to match entities |
-| `quarkus.hibernate-orm.log.sql` | `true` | Logs all SQL statements to the console |
-| `quarkus.smallrye-openapi.path` | `/openapi` | Path to the OpenAPI specification document |
-| `quarkus.swagger-ui.path` | `/swagger` | Path to the Swagger UI interface |
+| Method   | Path                | Description                           | Query Params       |
+| -------- | ------------------- | ------------------------------------- | ------------------ |
+| `GET`    | `/srt/v1/dishes`    | List all dishes (or filter by category) | `?category=...`  |
+| `GET`    | `/srt/v1/dishes/{id}` | Get a single dish by ID             | —                  |
+| `POST`   | `/srt/v1/dishes`    | Create a new dish                     | —                  |
+| `PUT`    | `/srt/v1/dishes/{id}` | Update an existing dish              | —                  |
+| `DELETE` | `/srt/v1/dishes/{id}` | Delete a dish                        | —                  |
 
-> **Note:** AWS Secrets Manager integration is configured but currently commented out. To enable it, uncomment the `${aws-secretsmanager:...}` lines and remove the hardcoded credentials.
+### Backend Resources
 
----
+#### `application.properties`
+- **Database**: PostgreSQL on AWS RDS (`srt-db.cyfyc46k01xl.us-east-1.rds.amazonaws.com:5432/srt_db`).
+- **Hibernate**: `database.generation=update` (auto-updates schema), SQL logging enabled.
+- **CORS**: Allows `https://spiceroadtruck.com` and `http://localhost:3000`.
+- **OpenAPI**: Available at `/openapi`, Swagger UI at `/swagger`.
+- **AWS**: Region `us-east-1`, Secrets Manager integration available.
+- **Dev Services**: Disabled (using external RDS).
 
-### Backend – Docker
+### Docker
 
-Four Dockerfile variants are provided for containerizing the application:
+Four Dockerfile variants in `src/main/docker/`:
 
-| File | Mode | Base Image | Description |
-| --- | --- | --- | --- |
-| **`Dockerfile.jvm`** | JVM | `ubi9/openjdk-17-runtime` | Runs the Quarkus fast-jar on a JVM. Uses `run-java.sh` with automatic memory tuning. Supports `JAVA_OPTS`, `JAVA_OPTS_APPEND`, `JAVA_MAX_MEM_RATIO`, etc. |
-| **`Dockerfile.legacy-jar`** | Legacy JAR (JVM) | `ubi9/openjdk-17-runtime` | Runs a traditional single JAR (`-Dquarkus.package.jar.type=legacy-jar`). Same JVM tuning options as the JVM variant. |
-| **`Dockerfile.native`** | Native | `ubi9/ubi-minimal:9.6` | Runs a GraalVM native executable. Minimal UBI 9 base image. No JVM required at runtime. |
-| **`Dockerfile.native-micro`** | Native (Micro) | `ubi9-quarkus-micro-image:2.0` | Runs a GraalVM native executable on an even smaller micro base image, optimized for Quarkus native apps. |
+| File                       | Description                                          |
+| -------------------------- | ---------------------------------------------------- |
+| `Dockerfile.jvm`           | Standard JVM-based image (recommended for production) |
+| `Dockerfile.legacy-jar`    | Legacy uber-jar based image                          |
+| `Dockerfile.native`        | GraalVM native binary image                          |
+| `Dockerfile.native-micro`  | Minimal native image (smallest footprint)            |
 
-All Dockerfiles expose port **8080** and run as non-root user (`UID 1001`).
+### Backend Build Config
 
----
-
-### Backend – Build Output
-
-| Path | Description |
-| ---- | ----------- |
-| `backend/target/backend-1.0.0-SNAPSHOT.jar` | Compiled project JAR (thin JAR, not directly runnable) |
-| `backend/target/quarkus-app/quarkus-run.jar` | **Main entry point** – the fast-jar launcher. Run with `java -jar target/quarkus-app/quarkus-run.jar` |
-| `backend/target/quarkus-app/app/` | Contains the application classes JAR |
-| `backend/target/quarkus-app/lib/boot/` | Quarkus bootstrap JARs (classloader, logging, etc.) |
-| `backend/target/quarkus-app/lib/main/` | Third-party dependency JARs (Jackson, Hibernate, Netty, Vert.x, etc.) |
-| `backend/target/quarkus-app/quarkus/` | Quarkus-generated bytecode and application metadata |
-| `backend/target/classes/` | Compiled `.class` files and copied resources |
-| `backend/target/quarkus-artifact.properties` | Metadata about the built artifact type and path |
+#### `pom.xml`
+- **Group**: `com.spiceroad`, **Artifact**: `backend`, **Version**: `1.0.0-SNAPSHOT`
+- **Quarkus BOM**: 3.19.2
+- **Key Dependencies**:
+  - `quarkus-rest` + `quarkus-rest-jackson` — RESTEasy Reactive with JSON serialization
+  - `quarkus-hibernate-orm-panache` — ORM with active record pattern
+  - `quarkus-jdbc-postgresql` — PostgreSQL JDBC driver
+  - `quarkus-smallrye-openapi` — OpenAPI/Swagger generation
+  - `quarkus-amazon-secretsmanager` (Quarkiverse 2.16.0) — AWS Secrets Manager
+  - `quarkus-arc` — CDI dependency injection
+  - `quarkus-junit5` + `rest-assured` — Testing (test scope)
+- **Plugins**: quarkus-maven-plugin, maven-compiler-plugin (Java 17), surefire, failsafe
 
 ---
 
 ## API Reference
 
-Base URL: `http://localhost:8080`
+Base URL: `https://api.spiceroadtruck.com/srt/v1` (or `http://localhost:8080/srt/v1` locally)
 
-### Dishes
+### Dish Object
 
-| Method | Endpoint | Request Body | Response |
-| ------ | -------- | ------------ | -------- |
-| `GET` | `/srt/v1/dishes` | – | `200` – Array of all dishes |
-| `GET` | `/srt/v1/dishes/{id}` | – | `200` – Single dish object |
-| `POST` | `/srt/v1/dishes` | `{ "name": "...", "description": "...", "price": 0.0 }` | `201` – Created dish with ID |
-| `PUT` | `/srt/v1/dishes/{id}` | `{ "name": "...", "description": "...", "price": 0.0 }` | `200` – Updated dish |
-| `DELETE` | `/srt/v1/dishes/{id}` | – | `204` – No content |
-
-### Example
-
-```bash
-# Create a dish
-curl -X POST http://localhost:8080/srt/v1/dishes \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Butter Chicken Wrap", "description": "Creamy butter chicken in a warm naan wrap", "price": 12.99}'
-
-# List all dishes
-curl http://localhost:8080/srt/v1/dishes
-
-# Get a dish by ID
-curl http://localhost:8080/srt/v1/dishes/1
-
-# Update a dish
-curl -X PUT http://localhost:8080/srt/v1/dishes/1 \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Spicy Butter Chicken Wrap", "description": "Extra spicy butter chicken in a warm naan wrap", "price": 13.99}'
-
-# Delete a dish
-curl -X DELETE http://localhost:8080/srt/v1/dishes/1
+```json
+{
+  "id": 1,
+  "name": "Chicken Biryani",
+  "description": "Aromatic basmati rice with tender chicken and spices",
+  "price": 14.99,
+  "category": "Biryanis/Pulaos",
+  "imageUrl": "https://..."
+}
 ```
 
-### Interactive API Docs
+### Endpoints
 
-- **Swagger UI:** [http://localhost:8080/swagger](http://localhost:8080/swagger)
-- **OpenAPI Spec:** [http://localhost:8080/openapi](http://localhost:8080/openapi)
+```
+GET    /srt/v1/dishes              → List all dishes
+GET    /srt/v1/dishes?category=... → Filter by category
+GET    /srt/v1/dishes/{id}         → Get dish by ID
+POST   /srt/v1/dishes              → Create dish (body: Dish JSON)
+PUT    /srt/v1/dishes/{id}         → Update dish (body: Dish JSON)
+DELETE /srt/v1/dishes/{id}         → Delete dish
+```
+
+**Swagger UI**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+**OpenAPI spec**: [http://localhost:8080/openapi](http://localhost:8080/openapi)
 
 ---
 
@@ -284,106 +329,107 @@ curl -X DELETE http://localhost:8080/srt/v1/dishes/1
 
 ### Prerequisites
 
-- **Java 17+** (or use the Maven Wrapper which handles Maven itself)
-- **PostgreSQL** database (local or AWS RDS)
+- **Java 17+**
+- **Maven 3.9+** (or use the included `mvnw` wrapper)
+- **Node.js 18+** and **npm**
+- **PostgreSQL** database (or AWS RDS instance)
 
-### Run in Dev Mode
+### Backend
 
 ```bash
 cd backend
+
+# Run in dev mode (hot reload)
 ./mvnw quarkus:dev
+
+# Package for production
+./mvnw clean package -DskipTests
+
+# Run the packaged JAR
+java -jar target/quarkus-app/quarkus-run.jar
 ```
 
-> Dev UI available at: [http://localhost:8080/q/dev/](http://localhost:8080/q/dev/)
+> ⚠️ **Important**: Always run Maven commands from the `backend/` directory, not the project root. The `pom.xml` lives inside `backend/`.
 
-### Package the Application
+### Frontend
 
 ```bash
-cd backend
-./mvnw package
+cd srt-ui
+
+# Install dependencies
+npm install
+
+# Run dev server (http://localhost:3000)
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-### Run the Packaged Application
+### Environment Variables (Frontend)
 
-```bash
-java -jar backend/target/quarkus-app/quarkus-run.jar
-```
+Create `srt-ui/.env.local`:
 
-### Build an Über-JAR
-
-```bash
-cd backend
-./mvnw package -Dquarkus.package.jar.type=uber-jar
-java -jar target/*-runner.jar
-```
-
-### Build a Native Executable (requires GraalVM)
-
-```bash
-cd backend
-./mvnw package -Dnative
-./target/backend-1.0.0-SNAPSHOT-runner
-```
-
----
-
-## Docker Deployment
-
-### JVM Mode
-
-```bash
-cd backend
-./mvnw package
-docker build -f src/main/docker/Dockerfile.jvm -t spice-road-truck/backend-jvm .
-docker run -i --rm -p 8080:8080 spice-road-truck/backend-jvm
-```
-
-### Native Mode
-
-```bash
-cd backend
-./mvnw package -Dnative
-docker build -f src/main/docker/Dockerfile.native -t spice-road-truck/backend .
-docker run -i --rm -p 8080:8080 spice-road-truck/backend
-```
-
-### Native Micro Mode (smallest image)
-
-```bash
-cd backend
-./mvnw package -Dnative
-docker build -f src/main/docker/Dockerfile.native-micro -t spice-road-truck/backend-micro .
-docker run -i --rm -p 8080:8080 spice-road-truck/backend-micro
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_EMAILJS_SERVICE_ID=your_service_id
+NEXT_PUBLIC_EMAILJS_WELCOME_TEMPLATE_ID=your_welcome_template_id
+NEXT_PUBLIC_EMAILJS_ADMIN_TEMPLATE_ID=your_admin_template_id
+NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=your_public_key
 ```
 
 ---
 
 ## Configuration
 
-All configuration is in `backend/src/main/resources/application.properties`. Key settings can be overridden via environment variables using the Quarkus naming convention:
+### Backend (`application.properties`)
 
-```bash
-# Override database URL
-export QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://localhost:5432/srt_db
+| Property                                    | Description                                |
+| ------------------------------------------- | ------------------------------------------ |
+| `quarkus.datasource.jdbc.url`               | PostgreSQL JDBC connection URL             |
+| `quarkus.datasource.username`               | Database username                          |
+| `quarkus.datasource.password`               | Database password                          |
+| `quarkus.hibernate-orm.database.generation`  | Schema strategy (`update`, `drop-and-create`, etc.) |
+| `quarkus.http.cors.origins`                 | Allowed CORS origins                       |
+| `quarkus.aws.region`                        | AWS region for Secrets Manager             |
 
-# Override credentials
-export QUARKUS_DATASOURCE_USERNAME=myuser
-export QUARKUS_DATASOURCE_PASSWORD=mypassword
-```
+### Frontend (Environment Variables)
 
-### Enabling AWS Secrets Manager
+| Variable                                     | Description                                |
+| -------------------------------------------- | ------------------------------------------ |
+| `NEXT_PUBLIC_API_URL`                        | Backend API base URL                       |
+| `NEXT_PUBLIC_EMAILJS_SERVICE_ID`             | EmailJS service ID                         |
+| `NEXT_PUBLIC_EMAILJS_WELCOME_TEMPLATE_ID`    | EmailJS welcome email template ID          |
+| `NEXT_PUBLIC_EMAILJS_ADMIN_TEMPLATE_ID`      | EmailJS admin notification template ID     |
+| `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY`             | EmailJS public key                         |
 
-To pull database credentials from AWS Secrets Manager instead of hardcoding them, update `application.properties`:
+---
 
-```properties
-quarkus.datasource.username=${aws-secretsmanager:prod/srt-db/credentials:username}
-quarkus.datasource.password=${aws-secretsmanager:prod/srt-db/credentials:password}
-```
+## Git & IDE Notes
 
-Ensure the application has appropriate AWS IAM permissions to access the secret `prod/srt-db/credentials`.
+### .idea Files (IntelliJ / WebStorm)
+- The `.idea/` directory contains IntelliJ IDEA project settings. These are **already gitignored** and should **NOT** be committed.
+- The ☕ coffee cup icons you see in IntelliJ are the standard icon for **Java source files** — this is completely normal.
+
+### Running Maven
+- The `pom.xml` is inside `backend/`, so always `cd backend` before running Maven:
+  ```bash
+  cd backend
+  ./mvnw clean package -DskipTests
+  ```
+- Running `mvn` or `./mvnw` from the project root will fail with "no POM in this directory".
+
+### Git Push
+- If you get `HTTP 400` errors when pushing, increase the HTTP buffer:
+  ```bash
+  git config http.postBuffer 524288000
+  ```
 
 ---
 
 ## License
 
-This project is private and not currently licensed for public distribution.
+Private project — Spice Road Truck © 2025
