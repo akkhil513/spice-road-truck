@@ -1,7 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.spiceroadtruck.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.spiceroadtruck.com' || 'https://00kc81ki01.execute-api.us-east-1.amazonaws.com';
 
 export interface Dish {
-  id?: number;
+  id?: string;
   name: string;
   description: string;
   price: number;
@@ -21,7 +21,7 @@ export async function getDishesByCategory(category: string): Promise<Dish[]> {
   return res.json();
 }
 
-export async function getDishById(id: number): Promise<Dish> {
+export async function getDishById(id: string): Promise<Dish> {
   const res = await fetch(`${API_BASE}/srt/v1/dishes/${id}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch dish');
   return res.json();
@@ -37,7 +37,7 @@ export async function createDish(dish: Dish): Promise<Dish> {
   return res.json();
 }
 
-export async function updateDish(id: number, dish: Dish): Promise<Dish> {
+export async function updateDish(id: string, dish: Dish): Promise<Dish> {
   const res = await fetch(`${API_BASE}/srt/v1/dishes/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -47,7 +47,7 @@ export async function updateDish(id: number, dish: Dish): Promise<Dish> {
   return res.json();
 }
 
-export async function deleteDish(id: number): Promise<boolean> {
+export async function deleteDish(id: string): Promise<boolean> {
   const res = await fetch(`${API_BASE}/srt/v1/dishes/${id}`, {
     method: 'DELETE',
   });
