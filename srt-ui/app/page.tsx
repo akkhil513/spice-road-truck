@@ -300,7 +300,7 @@ export default function Home() {
                 &quot;A culinary gem in Atlanta, known for its vibrant blend of Indian fusion and authentic classics.&quot;
               </blockquote>
             </div>
-            <div className="absolute -top-4 -right-4 bg-[#E67E22] text-white text-xs font-bold px-3 py-1.5 rounded-full">Est. 2019</div>
+            <div className="absolute -top-4 -right-4 bg-[#E67E22] text-white text-xs font-bold px-3 py-1.5 rounded-full">Est. 2025</div>
           </div>
           <div>
             <span className="text-[#C0392B] font-semibold text-sm uppercase tracking-widest">Our Story</span>

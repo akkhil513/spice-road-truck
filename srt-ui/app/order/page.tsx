@@ -2,22 +2,69 @@
 
 import { useState } from 'react';
 import { useCart } from '@/lib/cartContext';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function OrderPage() {
     const { items, updateQuantity, removeItem, total, totalItems, clearCart } = useCart();
-    const router = useRouter();
     const [step, setStep] = useState<'cart' | 'payment' | 'receipt'>('cart');
     const [form, setForm] = useState({ name: '', email: '', card: '', expiry: '', cvv: '' });
-    const [orderNumber] = useState(() => 'SRT-' + Math.floor(Math.random() * 9000 + 1000));
     const tax = total * 0.08;
     const grandTotal = total + tax;
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [lastOrderItems, setLastOrderItems] = useState<typeof items>([]);
+    const [lastTotal, setLastTotal] = useState(0);
+    const [lastTax, setLastTax] = useState(0);
+    const [lastGrandTotal, setLastGrandTotal] = useState(0);
+    const [orderNumber, setOrderNumber] = useState('');
+    const [orderDate, setOrderDate] = useState('');
 
-    const handlePayment = (e: React.FormEvent) => {
+    const handlePayment = async (e: React.FormEvent) => {
         e.preventDefault();
-        setStep('receipt');
-        clearCart();
+        setLoading(true);
+        setError('');
+
+        try {
+            const orderPayload = {
+                customerName: form.name,
+                customerEmail: form.email,
+                cardLast4: form.card.replace(/\s/g, '').slice(-4),
+                subtotal: total,
+                tax: tax,
+                grandTotal: grandTotal,
+                items: items.map(i => ({
+                    id: i.id,
+                    name: i.name,
+                    price: i.price,
+                    quantity: i.quantity
+                }))
+            };
+
+            const res = await fetch('https://api.spiceroadtruck.com/srt/v1/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderPayload)
+            });
+
+            const savedOrder = await res.json();
+
+            // Save everything before clearing cart
+            setLastOrderItems([...items]);
+            setLastTotal(total);
+            setLastTax(tax);
+            setLastGrandTotal(grandTotal);
+            setOrderNumber(savedOrder.orderNumber);
+            setOrderDate(new Date().toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: 'numeric', minute: '2-digit', hour12: true
+            }));
+            clearCart();
+            setStep('receipt');
+        } catch (err) {
+            setError('Failed to place order. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handlePrint = () => window.print();
@@ -59,7 +106,7 @@ export default function OrderPage() {
             </div>
 
             {/* Step indicator */}
-            <div style={{ background: '#fff', borderBottom: '0.5px solid #e5e7eb', display: 'flex', justifyContent: 'center', gap: '0' }}>
+            <div style={{ background: '#fff', borderBottom: '0.5px solid #e5e7eb', display: 'flex', justifyContent: 'center' }}>
                 {['cart', 'payment', 'receipt'].map((s, i) => (
                     <div key={s} style={{ padding: '14px 24px', fontSize: '13px', fontWeight: 600, color: step === s ? '#C0392B' : '#9ca3af', borderBottom: step === s ? '2px solid #C0392B' : '2px solid transparent' }}>
                         {i + 1}. {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -72,8 +119,6 @@ export default function OrderPage() {
                 {/* CART STEP */}
                 {step === 'cart' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem' }}>
-
-                        {/* Items */}
                         <div>
                             <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1A1A', marginBottom: '1rem' }}>
                                 Your Items ({totalItems})
@@ -204,14 +249,20 @@ export default function OrderPage() {
                                     </div>
                                 </div>
 
+                                {error && (
+                                    <div style={{ background: '#fef2f2', borderRadius: '8px', padding: '12px', fontSize: '13px', color: '#ef4444' }}>
+                                        ⚠️ {error}
+                                    </div>
+                                )}
+
                                 <div style={{ display: 'flex', gap: '12px' }}>
                                     <button type="button" onClick={() => setStep('cart')}
                                         style={{ flex: 1, background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: '10px', padding: '14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
                                         ← Back
                                     </button>
-                                    <button type="submit"
-                                        style={{ flex: 2, background: '#C0392B', color: '#fff', border: 'none', borderRadius: '10px', padding: '14px', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}>
-                                        Pay ${grandTotal.toFixed(2)} →
+                                    <button type="submit" disabled={loading}
+                                        style={{ flex: 2, background: loading ? '#9ca3af' : '#C0392B', color: '#fff', border: 'none', borderRadius: '10px', padding: '14px', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                                        {loading ? 'Processing...' : `Pay $${grandTotal.toFixed(2)} →`}
                                     </button>
                                 </div>
                             </form>
@@ -255,15 +306,16 @@ export default function OrderPage() {
                                     <span style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>✓ Order Confirmed</span>
                                 </div>
                                 <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>
-                                    Order #{orderNumber} · {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    Order #{orderNumber} · {orderDate}
                                 </p>
                             </div>
 
+                            {/* Order items from saved state */}
                             <div style={{ marginBottom: '16px' }}>
-                                {JSON.parse(localStorage.getItem('srt-last-order') || '[]').map((item: any, i: number) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#1A1A1A', padding: '6px 0' }}>
+                                {lastOrderItems.map((item, i) => (
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#1A1A1A', padding: '6px 0', borderBottom: '0.5px solid #f3f4f6' }}>
                                         <span>{item.name} × {item.quantity}</span>
-                                        <span>${(item.price * item.quantity).toFixed(2)}</span>
+                                        <span style={{ fontWeight: 600 }}>${(item.price * item.quantity).toFixed(2)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -271,16 +323,17 @@ export default function OrderPage() {
                             <hr style={{ border: 'none', borderTop: '1px dashed #e5e7eb', margin: '12px 0' }} />
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#6b7280', marginBottom: '6px' }}>
-                                <span>Subtotal</span><span>${total.toFixed(2)}</span>
+                                <span>Subtotal</span><span>${lastTotal.toFixed(2)}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#6b7280', marginBottom: '12px' }}>
-                                <span>Tax (8%)</span><span>${tax.toFixed(2)}</span>
+                                <span>Tax (8%)</span><span>${lastTax.toFixed(2)}</span>
                             </div>
 
                             <hr style={{ border: 'none', borderTop: '1px dashed #e5e7eb', margin: '12px 0' }} />
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 800, color: '#1A1A1A' }}>
-                                <span>Total</span><span style={{ color: '#C0392B' }}>${grandTotal.toFixed(2)}</span>
+                                <span>Total</span>
+                                <span style={{ color: '#C0392B' }}>${lastGrandTotal.toFixed(2)}</span>
                             </div>
 
                             <div style={{ marginTop: '16px', background: '#f9fafb', borderRadius: '8px', padding: '12px', fontSize: '13px', color: '#6b7280', textAlign: 'center' }}>
@@ -293,7 +346,7 @@ export default function OrderPage() {
                                     🖨 Print Receipt
                                 </button>
                                 <Link href="/menu"
-                                    style={{ flex: 1, background: '#C0392B', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    style={{ flex: 1, background: '#C0392B', color: '#fff', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     Order More
                                 </Link>
                             </div>

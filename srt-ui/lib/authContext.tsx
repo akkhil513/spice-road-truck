@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 interface AuthContextType {
     isAdmin: boolean;
     loading: boolean;
+    userName: string;
     logout: () => Promise<void>;
     refreshAuth: () => Promise<void>;
 }
@@ -12,26 +13,35 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
     isAdmin: false,
     loading: true,
-    logout: async () => {},
-    refreshAuth: async () => {},
+    userName: '',
+    logout: async () => { },
+    refreshAuth: async () => { },
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [userName, setUserName] = useState('');
 
     useEffect(() => {
-        // Only run in browser
         if (typeof window === 'undefined') return;
-        
         const timer = setTimeout(async () => {
             try {
-                const { fetchAuthSession } = await import('aws-amplify/auth');
+                const { fetchAuthSession, getCurrentUser } = await import('aws-amplify/auth');
                 await import('./auth');
                 const session = await fetchAuthSession();
-                setIsAdmin(!!session.tokens);
+                if (session.tokens) {
+                    setIsAdmin(true);
+                    try {
+                        const user = await getCurrentUser();
+                        setUserName(user.signInDetails?.loginId || user.username || 'Admin');
+                    } catch {
+                        setUserName('Admin');
+                    }
+                }
             } catch {
                 setIsAdmin(false);
+                setUserName('');
             } finally {
                 setLoading(false);
             }
@@ -41,11 +51,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const refreshAuth = async () => {
         try {
-            const { fetchAuthSession } = await import('aws-amplify/auth');
+            const { fetchAuthSession, getCurrentUser } = await import('aws-amplify/auth');
             const session = await fetchAuthSession();
-            setIsAdmin(!!session.tokens);
+            if (session.tokens) {
+                setIsAdmin(true);
+                try {
+                    const user = await getCurrentUser();
+                    setUserName(user.username || user.signInDetails?.loginId || 'Admin');
+                } catch {
+                    setUserName('Admin');
+                }
+            }
         } catch {
             setIsAdmin(false);
+            setUserName('');
         }
     };
 
@@ -53,10 +72,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { signOut } = await import('aws-amplify/auth');
         await signOut();
         setIsAdmin(false);
+        setUserName('');
     };
 
     return (
-        <AuthContext.Provider value={{ isAdmin, loading, logout, refreshAuth }}>
+        <AuthContext.Provider value={{ isAdmin, loading, userName, logout, refreshAuth }}>
             {children}
         </AuthContext.Provider>
     );
