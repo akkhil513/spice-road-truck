@@ -1,7 +1,12 @@
-com/spiceroad/service/DishService.class
 com/spiceroad/model/SRTDish.class
-com/spiceroad/model/SRTDish$SRTDishBuilder.class
+com/spiceroad/api/OrderResource.class
 com/spiceroad/config/DynamoDbConfig.class
 com/spiceroad/api/DishResource.class
-com/spiceroad/constant/DishConstants.class
+com/spiceroad/repository/SRTOrderRepository.class
 com/spiceroad/repository/SRTDishRepository.class
+com/spiceroad/model/SRTOrder$OrderItem.class
+com/spiceroad/service/DishService.class
+com/spiceroad/model/SRTOrder.class
+com/spiceroad/model/SRTDish$SRTDishBuilder.class
+com/spiceroad/constant/DishConstants.class
+com/spiceroad/service/OrderService.class
