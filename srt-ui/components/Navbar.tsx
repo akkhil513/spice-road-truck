@@ -59,22 +59,30 @@ export default function Navbar() {
                     </Link>
 
                     {/* Desktop */}
-                    <div className="hidden md:flex items-center gap-6">
+                    <div className="hidden md:flex items-center gap-3">
                         {links.map((link) => (
                             <Link key={link.href} href={link.href}
-                                className="text-gray-300 hover:text-[#E67E22] transition-colors duration-200 font-medium">
+                                className="text-gray-300 hover:text-[#E67E22] transition-colors duration-200 font-medium px-2">
                                 {link.label}
                             </Link>
                         ))}
+
+                        {/* Order Now — always visible */}
+                        <Link href="/order"
+                            className="bg-[#C0392B] hover:bg-[#E67E22] text-white px-4 py-2 rounded-full font-semibold transition-colors duration-200">
+                            Order Now
+                        </Link>
+
+                        {/* Admin or Logout */}
                         {isAdmin ? (
                             <button onClick={handleLogout}
-                                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-full font-semibold transition-colors duration-200">
+                                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-full font-semibold transition-colors duration-200 text-sm">
                                 Logout
                             </button>
                         ) : (
                             <Link href="/admin"
-                                className="bg-[#C0392B] hover:bg-[#E67E22] text-white px-4 py-2 rounded-full font-semibold transition-colors duration-200">
-                                Order Now
+                                className="text-gray-500 hover:text-white border border-gray-700 hover:border-gray-500 px-3 py-2 rounded-full text-sm transition-colors duration-200">
+                                Admin
                             </Link>
                         )}
                     </div>
@@ -94,16 +102,21 @@ export default function Navbar() {
                                 {link.label}
                             </Link>
                         ))}
+                        <Link href="/order"
+                            className="bg-[#C0392B] text-white px-4 py-2 rounded-full font-semibold text-center"
+                            onClick={() => setIsOpen(false)}>
+                            Order Now
+                        </Link>
                         {isAdmin ? (
                             <button onClick={handleLogout}
                                 className="bg-gray-700 text-white px-4 py-2 rounded-full font-semibold text-center">
                                 Logout
                             </button>
                         ) : (
-                            <Link href="/order"
-                                className="bg-[#C0392B] text-white px-4 py-2 rounded-full font-semibold text-center"
+                            <Link href="/admin"
+                                className="text-gray-400 border border-gray-700 px-4 py-2 rounded-full text-sm text-center"
                                 onClick={() => setIsOpen(false)}>
-                                Order Now
+                                Admin
                             </Link>
                         )}
                     </div>

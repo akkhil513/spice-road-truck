@@ -10,6 +10,8 @@ Amplify.configure({
             }
         }
     }
+}, {
+    ssr: false
 });
 
 export default Amplify;

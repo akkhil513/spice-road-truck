@@ -23,11 +23,12 @@ export default function AdminDashboard() {
     const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editingDish, setEditingDish] = useState<Dish | null>(null);
+    const [isNewCategory, setIsNewCategory] = useState(false);
     const [form, setForm] = useState({
         name: '', description: '', price: '', category: '', imageUrl: ''
     });
 
-    const categories = ['Appetizers', 'Biryanis/Pulaos', 'Street Style', 'Desserts'];
+    const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
 
     useEffect(() => {
         checkAuthAndLoad();
@@ -43,17 +44,20 @@ export default function AdminDashboard() {
     };
 
     const loadDishes = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch(`${API}/srt/v1/dishes`);
-            const data = await res.json();
-            setDishes(data);
-        } catch {
-            setError('Failed to load dishes');
-        } finally {
-            setLoading(false);
-        }
-    };
+    setLoading(true);
+    try {
+        const res = await fetch(`${API}/srt/v1/dishes`);
+        const data = await res.json();
+        setDishes(data);
+        // Extract unique categories from loaded dishes
+        const cats = [...new Set(data.map((d: Dish) => d.category).filter(Boolean))] as string[];
+        setUniqueCategories(cats);
+    } catch {
+        setError('Failed to load dishes');
+    } finally {
+        setLoading(false);
+    }
+};
 
     const handleLogout = async () => {
         await signOut();
@@ -86,6 +90,7 @@ export default function AdminDashboard() {
             }
             setShowForm(false);
             setEditingDish(null);
+            setIsNewCategory(false);
             setForm({ name: '', description: '', price: '', category: '', imageUrl: '' });
             loadDishes();
         } catch {
@@ -95,6 +100,7 @@ export default function AdminDashboard() {
 
     const handleEdit = (dish: Dish) => {
         setEditingDish(dish);
+        setIsNewCategory(false);
         setForm({
             name: dish.name,
             description: dish.description,
@@ -113,6 +119,13 @@ export default function AdminDashboard() {
         } catch {
             setError('Failed to delete dish');
         }
+    };
+
+    const handleCancel = () => {
+        setShowForm(false);
+        setEditingDish(null);
+        setIsNewCategory(false);
+        setForm({ name: '', description: '', price: '', category: '', imageUrl: '' });
     };
 
     const inputStyle = {
@@ -141,7 +154,12 @@ export default function AdminDashboard() {
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <button
-                        onClick={() => { setEditingDish(null); setForm({ name: '', description: '', price: '', category: '', imageUrl: '' }); setShowForm(true); }}
+                        onClick={() => {
+                            setEditingDish(null);
+                            setIsNewCategory(false);
+                            setForm({ name: '', description: '', price: '', category: '', imageUrl: '' });
+                            setShowForm(true);
+                        }}
                         style={{ background: '#C0392B', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 600 }}>
                         + Add Dish
                     </button>
@@ -160,19 +178,93 @@ export default function AdminDashboard() {
                 <div style={{ background: '#1E1E1E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem' }}>
                     <h2 style={{ margin: '0 0 1.5rem', fontSize: '16px' }}>{editingDish ? 'Edit Dish' : 'Add New Dish'}</h2>
                     <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <input style={inputStyle} placeholder="Dish name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-                        <input style={inputStyle} placeholder="Price (e.g. 7.99)" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required type="number" step="0.01" />
-                        <select style={inputStyle} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} required>
+
+                        <input
+                            style={inputStyle}
+                            placeholder="Dish name"
+                            value={form.name}
+                            onChange={e => setForm({ ...form, name: e.target.value })}
+                            required
+                        />
+
+                        <input
+                            style={inputStyle}
+                            placeholder="Price (e.g. 7.99)"
+                            value={form.price}
+                            onChange={e => setForm({ ...form, price: e.target.value })}
+                            required
+                            type="number"
+                            step="0.01"
+                        />
+
+                        {/* Category dropdown */}
+                        <select
+                            style={inputStyle}
+                            value={isNewCategory ? '__new__' : form.category}
+                            onChange={e => {
+                                if (e.target.value === '__new__') {
+                                    setIsNewCategory(true);
+                                    setForm({ ...form, category: '' });
+                                } else {
+                                    setIsNewCategory(false);
+                                    setForm({ ...form, category: e.target.value });
+                                }
+                            }}
+                        >
                             <option value="">Select category</option>
-                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                            {uniqueCategories.map(c => (
+                                <option key={c} value={c}>{c}</option>
+                            ))}
+                            <option value="__new__">+ Add new category...</option>
                         </select>
-                        <input style={inputStyle} placeholder="Image URL (optional)" value={form.imageUrl} onChange={e => setForm({ ...form, imageUrl: e.target.value })} />
-                        <textarea style={{ ...inputStyle, gridColumn: '1 / -1', minHeight: '80px', resize: 'vertical' }} placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required />
+
+                        {/* New category input — shows when + Add new is selected */}
+                        {isNewCategory ? (
+                            <input
+                                style={inputStyle}
+                                placeholder="Type new category name"
+                                value={form.category}
+                                onChange={e => setForm({ ...form, category: e.target.value })}
+                                required
+                                autoFocus
+                            />
+                        ) : (
+                            <input
+                                style={inputStyle}
+                                placeholder="Image URL (optional)"
+                                value={form.imageUrl}
+                                onChange={e => setForm({ ...form, imageUrl: e.target.value })}
+                            />
+                        )}
+
+                        {/* Show image URL below when new category is visible */}
+                        {isNewCategory && (
+                            <input
+                                style={{ ...inputStyle, gridColumn: '1 / -1' }}
+                                placeholder="Image URL (optional)"
+                                value={form.imageUrl}
+                                onChange={e => setForm({ ...form, imageUrl: e.target.value })}
+                            />
+                        )}
+
+                        <textarea
+                            style={{ ...inputStyle, gridColumn: '1 / -1', minHeight: '80px', resize: 'vertical' }}
+                            placeholder="Description"
+                            value={form.description}
+                            onChange={e => setForm({ ...form, description: e.target.value })}
+                            required
+                        />
+
                         <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px' }}>
-                            <button type="submit" style={{ background: '#C0392B', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', cursor: 'pointer', fontWeight: 600 }}>
+                            <button
+                                type="submit"
+                                style={{ background: '#C0392B', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', cursor: 'pointer', fontWeight: 600 }}>
                                 {editingDish ? 'Update Dish' : 'Add Dish'}
                             </button>
-                            <button type="button" onClick={() => setShowForm(false)} style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '10px 24px', cursor: 'pointer' }}>
+                            <button
+                                type="button"
+                                onClick={handleCancel}
+                                style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '10px 24px', cursor: 'pointer' }}>
                                 Cancel
                             </button>
                         </div>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { getAllDishes, Dish } from '@/lib/api';
 import { useAuth } from '@/lib/authContext';
+import { useCart } from '@/lib/cartContext';
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   'Appetizers': '🍢',
@@ -11,6 +12,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   'Spicy Desi Meals': '🍛',
   'Indo-American Bites': '🌮',
   'Hot / Cold Drinks': '🥤',
+  'Desserts': '🍨',
   'Kids Junction': '🧒',
 };
 
@@ -19,10 +21,10 @@ function getCategoryEmoji(cat: string) {
 }
 
 const API = 'https://api.spiceroadtruck.com';
-const CATEGORIES = ['Appetizers', 'Biryanis/Pulaos', 'Street Style', 'Spicy Desi Bites', 'Spicy Desi Meals', 'Indo-American Bites', 'Hot / Cold Drinks', 'Kids Junction'];
 
 export default function MenuPage() {
   const { isAdmin } = useAuth();
+  const { items, total, totalItems } = useCart();
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,6 +32,7 @@ export default function MenuPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingDish, setEditingDish] = useState<Dish | null>(null);
   const [form, setForm] = useState({ name: '', description: '', price: '', category: '', imageUrl: '' });
+  const [isNewCategory, setIsNewCategory] = useState(false);
 
   const loadDishes = () => {
     setLoading(true);
@@ -52,6 +55,7 @@ export default function MenuPage() {
       }
       setShowForm(false);
       setEditingDish(null);
+      setIsNewCategory(false);
       setForm({ name: '', description: '', price: '', category: '', imageUrl: '' });
       loadDishes();
     } catch { setError('Failed to save dish'); }
@@ -74,8 +78,8 @@ export default function MenuPage() {
   const categories = ['All', ...uniqueCategories];
   const filtered = activeCategory === 'All' ? dishes : dishes.filter(d => d.category === activeCategory);
   const grouped = uniqueCategories.reduce((acc, cat) => {
-    const items = dishes.filter(d => d.category === cat);
-    if (items.length > 0) acc[cat] = items;
+    const catItems = dishes.filter(d => d.category === cat);
+    if (catItems.length > 0) acc[cat] = catItems;
     return acc;
   }, {} as Record<string, Dish[]>);
 
@@ -114,17 +118,40 @@ export default function MenuPage() {
             <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <input style={{ ...inputStyle, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }} placeholder="Dish name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
               <input style={{ ...inputStyle, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }} placeholder="Price (e.g. 7.99)" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required type="number" step="0.01" />
-              <select style={{ ...inputStyle, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} required>
+              <select
+                style={{ ...inputStyle, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+                value={isNewCategory ? '__new__' : form.category}
+                onChange={e => {
+                  if (e.target.value === '__new__') {
+                    setIsNewCategory(true);
+                    setForm({ ...form, category: '' });
+                  } else {
+                    setIsNewCategory(false);
+                    setForm({ ...form, category: e.target.value });
+                  }
+                }}
+              >
                 <option value="">Select category</option>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="__new__">+ Add new category...</option>
               </select>
+              {isNewCategory && (
+                <input
+                  style={{ ...inputStyle, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+                  placeholder="Type new category name"
+                  value={form.category}
+                  onChange={e => setForm({ ...form, category: e.target.value })}
+                  required
+                  autoFocus
+                />
+              )}
               <input style={{ ...inputStyle, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }} placeholder="Image URL (optional)" value={form.imageUrl} onChange={e => setForm({ ...form, imageUrl: e.target.value })} />
               <textarea style={{ ...inputStyle, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', gridColumn: '1 / -1', minHeight: '80px', resize: 'vertical' }} placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required />
               <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px' }}>
                 <button type="submit" style={{ background: '#C0392B', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', cursor: 'pointer', fontWeight: 600 }}>
                   {editingDish ? 'Update Dish' : 'Add Dish'}
                 </button>
-                <button type="button" onClick={() => { setShowForm(false); setEditingDish(null); }} style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '10px 24px', cursor: 'pointer' }}>
+                <button type="button" onClick={() => { setShowForm(false); setEditingDish(null); setIsNewCategory(false); }} style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '10px 24px', cursor: 'pointer' }}>
                   Cancel
                 </button>
               </div>
@@ -143,7 +170,7 @@ export default function MenuPage() {
             </button>
           ))}
           {isAdmin && (
-            <button onClick={() => { setEditingDish(null); setForm({ name: '', description: '', price: '', category: '', imageUrl: '' }); setShowForm(true); }}
+            <button onClick={() => { setEditingDish(null); setIsNewCategory(false); setForm({ name: '', description: '', price: '', category: '', imageUrl: '' }); setShowForm(true); }}
               style={{ marginLeft: 'auto', background: '#C0392B', color: '#fff', border: 'none', borderRadius: '20px', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', flexShrink: 0 }}>
               + Add Dish
             </button>
@@ -151,65 +178,100 @@ export default function MenuPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      {/* MAIN CONTENT + CART */}
+      <div className="max-w-7xl mx-auto px-4 py-12 flex gap-6">
 
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="w-12 h-12 border-4 border-[#C0392B] border-t-transparent rounded-full animate-spin" />
-            <p className="text-gray-500 font-medium">Loading menu...</p>
-          </div>
-        )}
+        {/* Left — Dishes */}
+        <div className="flex-1 min-w-0">
 
-        {error && (
-          <div className="text-center py-24">
-            <p className="text-red-500 font-semibold text-lg">{error}</p>
-            <button onClick={() => window.location.reload()} className="mt-4 bg-[#C0392B] text-white px-6 py-2 rounded-full font-semibold">Try Again</button>
-          </div>
-        )}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div className="w-12 h-12 border-4 border-[#C0392B] border-t-transparent rounded-full animate-spin" />
+              <p className="text-gray-500 font-medium">Loading menu...</p>
+            </div>
+          )}
 
-        {/* ALL view */}
-        {!loading && !error && activeCategory === 'All' && (
-          <div className="space-y-16">
-            {Object.entries(grouped).map(([category, items]) => (
-              <section key={category}>
-                <div className="flex items-center gap-3 mb-8">
-                  <span className="text-3xl">{getCategoryEmoji(category)}</span>
-                  <div>
-                    <h2 className="text-2xl font-black text-[#1A1A1A]">{category}</h2>
-                    <p className="text-sm text-gray-400">{items.length} item{items.length > 1 ? 's' : ''}</p>
+          {error && (
+            <div className="text-center py-24">
+              <p className="text-red-500 font-semibold text-lg">{error}</p>
+              <button onClick={() => window.location.reload()} className="mt-4 bg-[#C0392B] text-white px-6 py-2 rounded-full font-semibold">Try Again</button>
+            </div>
+          )}
+
+          {/* ALL view */}
+          {!loading && !error && activeCategory === 'All' && (
+            <div className="space-y-16">
+              {Object.entries(grouped).map(([category, catItems]) => (
+                <section key={category}>
+                  <div className="flex items-center gap-3 mb-8">
+                    <span className="text-3xl">{getCategoryEmoji(category)}</span>
+                    <div>
+                      <h2 className="text-2xl font-black text-[#1A1A1A]">{category}</h2>
+                      <p className="text-sm text-gray-400">{catItems.length} item{catItems.length > 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="flex-1 h-px bg-gray-200 ml-4" />
                   </div>
-                  <div className="flex-1 h-px bg-gray-200 ml-4" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {catItems.map(dish => (
+                      <DishCard key={dish.id} dish={dish} getCategoryEmoji={getCategoryEmoji} isAdmin={isAdmin} onEdit={handleEdit} onDelete={handleDelete} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+              {Object.keys(grouped).length === 0 && <EmptyState />}
+            </div>
+          )}
+
+          {/* FILTERED view */}
+          {!loading && !error && activeCategory !== 'All' && (
+            <div>
+              <div className="flex items-center gap-3 mb-8">
+                <span className="text-3xl">{getCategoryEmoji(activeCategory)}</span>
+                <div>
+                  <h2 className="text-2xl font-black text-[#1A1A1A]">{activeCategory}</h2>
+                  <p className="text-sm text-gray-400">{filtered.length} item{filtered.length > 1 ? 's' : ''}</p>
                 </div>
+              </div>
+              {filtered.length === 0 ? <EmptyState /> : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {items.map(dish => (
+                  {filtered.map(dish => (
                     <DishCard key={dish.id} dish={dish} getCategoryEmoji={getCategoryEmoji} isAdmin={isAdmin} onEdit={handleEdit} onDelete={handleDelete} />
                   ))}
                 </div>
-              </section>
-            ))}
-            {Object.keys(grouped).length === 0 && <EmptyState />}
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right — Cart Side Panel */}
+        {totalItems > 0 && (
+          <div style={{ width: '300px', flexShrink: 0 }}>
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '0.5px solid #e5e7eb', position: 'sticky', top: '120px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A1A1A', marginBottom: '16px' }}>
+                🛒 Your Cart ({totalItems})
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                {items.map(item => (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#1A1A1A', fontWeight: 500 }}>{item.name} × {item.quantity}</span>
+                    <span style={{ color: '#C0392B', fontWeight: 700 }}>${(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: '12px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 700, color: '#1A1A1A' }}>
+                  <span>Total</span>
+                  <span style={{ color: '#C0392B' }}>${total.toFixed(2)}</span>
+                </div>
+              </div>
+              <a href="/order"
+                style={{ display: 'block', background: '#C0392B', color: '#fff', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
+                Proceed to Order →
+              </a>
+            </div>
           </div>
         )}
 
-        {/* FILTERED view */}
-        {!loading && !error && activeCategory !== 'All' && (
-          <div>
-            <div className="flex items-center gap-3 mb-8">
-              <span className="text-3xl">{getCategoryEmoji(activeCategory)}</span>
-              <div>
-                <h2 className="text-2xl font-black text-[#1A1A1A]">{activeCategory}</h2>
-                <p className="text-sm text-gray-400">{filtered.length} item{filtered.length > 1 ? 's' : ''}</p>
-              </div>
-            </div>
-            {filtered.length === 0 ? <EmptyState /> : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filtered.map(dish => (
-                  <DishCard key={dish.id} dish={dish} getCategoryEmoji={getCategoryEmoji} isAdmin={isAdmin} onEdit={handleEdit} onDelete={handleDelete} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -222,6 +284,9 @@ function DishCard({ dish, getCategoryEmoji, isAdmin, onEdit, onDelete }: {
   onEdit: (dish: Dish) => void;
   onDelete: (id: string) => void;
 }) {
+  const { items, addItem, updateQuantity } = useCart();
+  const cartItem = items.find(i => i.id === dish.id);
+
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100 flex flex-col">
       <div className="h-48 bg-gradient-to-br from-[#C0392B]/10 to-[#E67E22]/20 flex items-center justify-center relative overflow-hidden">
@@ -235,7 +300,6 @@ function DishCard({ dish, getCategoryEmoji, isAdmin, onEdit, onDelete }: {
             {dish.category}
           </span>
         )}
-        {/* Admin buttons on card */}
         {isAdmin && (
           <div className="absolute top-3 right-3 flex gap-2">
             <button onClick={() => onEdit(dish)}
@@ -255,7 +319,28 @@ function DishCard({ dish, getCategoryEmoji, isAdmin, onEdit, onDelete }: {
           <span className="text-[#C0392B] font-black text-lg whitespace-nowrap">${dish.price.toFixed(2)}</span>
         </div>
         {dish.description && (
-          <p className="text-gray-500 text-sm leading-relaxed flex-1 line-clamp-3">{dish.description}</p>
+          <p className="text-gray-500 text-sm leading-relaxed flex-1 line-clamp-3 mb-4">{dish.description}</p>
+        )}
+        {!cartItem ? (
+          <button
+            onClick={() => addItem({ id: dish.id!, name: dish.name, price: dish.price, category: dish.category })}
+            style={{ background: '#C0392B', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '14px', width: '100%' }}>
+            + Add to Cart
+          </button>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFF8F0', borderRadius: '8px', padding: '6px 10px', border: '1px solid rgba(192,57,43,0.2)' }}>
+            <button
+              onClick={() => updateQuantity(dish.id!, cartItem.quantity - 1)}
+              style={{ background: '#C0392B', color: '#fff', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              −
+            </button>
+            <span style={{ fontWeight: 700, fontSize: '15px', color: '#1A1A1A' }}>{cartItem.quantity} in cart</span>
+            <button
+              onClick={() => updateQuantity(dish.id!, cartItem.quantity + 1)}
+              style={{ background: '#C0392B', color: '#fff', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              +
+            </button>
+          </div>
         )}
       </div>
     </div>

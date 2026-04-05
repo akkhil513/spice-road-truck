@@ -2,11 +2,9 @@
 
 import { signIn, confirmSignIn } from 'aws-amplify/auth';
 import '../../lib/auth';
-import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 export default function AdminLogin() {
-    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -15,11 +13,10 @@ export default function AdminLogin() {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-    // Clear any existing session on login page load
-    import('aws-amplify/auth').then(({ signOut }) => {
-        signOut().catch(() => {});
-    });
-}, []);
+        import('aws-amplify/auth').then(({ signOut }) => {
+            signOut().catch(() => {});
+        });
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,7 +32,7 @@ export default function AdminLogin() {
                 return;
             }
 
-            router.push('/admin/dashboard');
+            window.location.href = '/';
         } catch (err: any) {
             setError(err.message || 'Login failed');
             setLoading(false);
@@ -49,7 +46,7 @@ export default function AdminLogin() {
 
         try {
             await confirmSignIn({ challengeResponse: newPassword });
-            router.push('/admin/dashboard');
+            window.location.href = '/';
         } catch (err: any) {
             setError(err.message || 'Failed to set new password');
             setLoading(false);
