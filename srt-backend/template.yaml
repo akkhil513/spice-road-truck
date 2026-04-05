@@ -41,6 +41,34 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  OrdersTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    Properties:
+      TableName: !Sub srt-orders-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: orderDate
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: date-index
+          KeySchema:
+            - AttributeName: orderDate
+              KeyType: HASH
+            - AttributeName: sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -68,6 +96,17 @@ Resources:
                 Resource:
                   - !GetAtt DishesTable.Arn
                   - !Sub '${DishesTable.Arn}/index/*'
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/srt-orders-${Environment}
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/srt-orders-${Environment}/index/*
         - PolicyName: CloudWatchLogsAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -82,8 +121,8 @@ Resources:
   LambdaLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub /aws/lambda/srt-backend-${Environment}
-      RetentionInDays: !If [ IsProd, 2, 1 ]
+      LogGroupName: !Sub /aws/lambda/srt-dishes-lambda-${Environment}
+      RetentionInDays: 1
 
   SRTDishesLambdaFunction:
     Type: AWS::Lambda::Function
@@ -105,19 +144,19 @@ Resources:
   ApiGateway:
     Type: AWS::ApiGatewayV2::Api
     Properties:
-        Name: !Sub srt-api-${Environment}
-        ProtocolType: HTTP
-        CorsConfiguration:
-            AllowOrigins:
-                - '*'
-            AllowMethods:
-                - GET
-                - POST
-                - PUT
-                - DELETE
-                - OPTIONS
-            AllowHeaders:
-                - '*'
+      Name: !Sub srt-api-${Environment}
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - '*'
 
   LambdaIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -127,6 +166,7 @@ Resources:
       IntegrationUri: !GetAtt SRTDishesLambdaFunction.Arn
       PayloadFormatVersion: '2.0'
 
+  # Dishes Routes
   GetDishesRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -162,6 +202,28 @@ Resources:
       RouteKey: 'DELETE /srt/v1/dishes/{id}'
       Target: !Sub integrations/${LambdaIntegration}
 
+  # Orders Routes
+  GetOrdersRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'GET /srt/v1/orders'
+      Target: !Sub integrations/${LambdaIntegration}
+
+  PostOrdersRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /srt/v1/orders'
+      Target: !Sub integrations/${LambdaIntegration}
+
+  PutOrderStatusRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'PUT /srt/v1/orders/{sk}/status'
+      Target: !Sub integrations/${LambdaIntegration}
+
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
@@ -175,7 +237,7 @@ Resources:
       FunctionName: !Ref SRTDishesLambdaFunction
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*/srt/v1/dishes*
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*/srt/*
 
 Outputs:
   DishesTableName:
@@ -189,6 +251,12 @@ Outputs:
     Value: !GetAtt DishesTable.Arn
     Export:
       Name: !Sub srt-dishes-table-arn-${Environment}
+
+  OrdersTableArn:
+    Description: The ARN of the DynamoDB table for orders
+    Value: !GetAtt OrdersTable.Arn
+    Export:
+      Name: !Sub srt-orders-table-arn-${Environment}
 
   ApiEndpoint:
     Description: The endpoint of the API Gateway
