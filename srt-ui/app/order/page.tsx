@@ -118,7 +118,7 @@ export default function OrderPage() {
 
                 {/* CART STEP */}
                 {step === 'cart' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '1.5rem' }}>
                         <div>
                             <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1A1A', marginBottom: '1rem' }}>
                                 Your Items ({totalItems})
@@ -198,13 +198,13 @@ export default function OrderPage() {
 
                 {/* PAYMENT STEP */}
                 {step === 'payment' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '1.5rem' }}>
                         <div>
                             <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1A1A1A', marginBottom: '1.5rem' }}>Payment Details</h2>
                             <form onSubmit={handlePayment} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                 <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '0.5px solid #e5e7eb' }}>
                                     <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1A1A1A', marginBottom: '16px' }}>Contact Information</h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
                                         <div>
                                             <label style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Full Name</label>
                                             <input style={inputStyle} placeholder="John Smith" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
@@ -225,7 +225,7 @@ export default function OrderPage() {
                                                 onChange={e => setForm({ ...form, card: e.target.value.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim() })}
                                                 maxLength={19} required />
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
                                             <div>
                                                 <label style={{ fontSize: '12px', color: '#6b7280', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Expiry Date</label>
                                                 <input style={inputStyle} placeholder="MM/YY" value={form.expiry}

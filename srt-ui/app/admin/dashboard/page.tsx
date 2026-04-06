@@ -49,6 +49,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 export default function AdminDashboard() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'dishes' | 'orders'>('dishes');
+    const [authChecked, setAuthChecked] = useState(false);
 
     // Dishes state
     const [dishes, setDishes] = useState<Dish[]>([]);
@@ -78,7 +79,12 @@ export default function AdminDashboard() {
 
     const checkAuthAndLoad = async () => {
         try {
-            await fetchAuthSession();
+            const session = await fetchAuthSession();
+            if (!session.tokens) {
+                router.push('/admin');
+                return;
+            }
+            setAuthChecked(true);
             loadDishes();
             loadOrders();
         } catch {
@@ -357,7 +363,17 @@ export default function AdminDashboard() {
             </div>
         </div>
     );
-};            
+};
+
+    if (!authChecked) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.1)', borderTop: '3px solid #C0392B', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>Verifying access...</p>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        );
+    }
 
     return (
         <div style={{ minHeight: '100vh', background: '#111', color: '#fff', padding: '2rem' }}>

@@ -10,6 +10,11 @@ export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [visitors, setVisitors] = useState<number>(0);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+    const [pwError, setPwError] = useState('');
+    const [pwSuccess, setPwSuccess] = useState('');
+    const [pwLoading, setPwLoading] = useState(false);
     const { isAdmin, logout, userName } = useAuth();
     const router = useRouter();
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -48,6 +53,40 @@ export default function Navbar() {
         setDropdownOpen(false);
         await logout();
         router.push('/');
+    };
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPwError('');
+        setPwSuccess('');
+
+        if (pwForm.newPw !== pwForm.confirm) {
+            setPwError('New passwords do not match');
+            return;
+        }
+        if (pwForm.newPw.length < 8) {
+            setPwError('Password must be at least 8 characters');
+            return;
+        }
+
+        setPwLoading(true);
+        try {
+            const { updatePassword } = await import('aws-amplify/auth');
+            await updatePassword({
+                oldPassword: pwForm.current,
+                newPassword: pwForm.newPw,
+            });
+            setPwSuccess('Password updated successfully!');
+            setPwForm({ current: '', newPw: '', confirm: '' });
+            setTimeout(() => {
+                setShowPasswordModal(false);
+                setPwSuccess('');
+            }, 2000);
+        } catch (err: any) {
+            setPwError(err.message || 'Failed to update password');
+        } finally {
+            setPwLoading(false);
+        }
     };
 
     // Get initials from email or name
@@ -133,6 +172,14 @@ export default function Navbar() {
                                         </Link>
 
                                         <button
+                                            onClick={() => { setDropdownOpen(false); setShowPasswordModal(true); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', color: '#fff', background: 'none', border: 'none', width: '100%', textAlign: 'left', fontSize: '13px', cursor: 'pointer', borderRadius: '6px' }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                            🔑 Change Password
+                                        </button>
+
+                                        <button
                                             onClick={handleLogout}
                                             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', color: '#E74C3C', background: 'none', border: 'none', width: '100%', textAlign: 'left', fontSize: '13px', cursor: 'pointer', borderRadius: '6px', transition: 'background 0.15s' }}
                                             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(231,76,60,0.1)')}
@@ -189,6 +236,78 @@ export default function Navbar() {
                                 Admin
                             </Link>
                         )}
+                    </div>
+                )}
+
+                {/* Change Password Modal */}
+                {showPasswordModal && (
+                    <div
+                        onClick={() => setShowPasswordModal(false)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                        <div
+                            onClick={e => e.stopPropagation()}
+                            style={{ background: '#2A2A2A', borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '400px', border: '1px solid rgba(255,255,255,0.1)' }}>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h2 style={{ color: '#fff', fontSize: '18px', fontWeight: 700, margin: 0 }}>Change Password</h2>
+                                <button onClick={() => setShowPasswordModal(false)}
+                                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '20px' }}>✕</button>
+                            </div>
+
+                            <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '6px' }}>Current Password</label>
+                                    <input
+                                        type="password"
+                                        value={pwForm.current}
+                                        onChange={e => setPwForm({ ...pwForm, current: e.target.value })}
+                                        required
+                                        style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '12px 14px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                                        placeholder="Enter current password"
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '6px' }}>New Password</label>
+                                    <input
+                                        type="password"
+                                        value={pwForm.newPw}
+                                        onChange={e => setPwForm({ ...pwForm, newPw: e.target.value })}
+                                        required
+                                        style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '12px 14px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                                        placeholder="Min 8 characters"
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '6px' }}>Confirm New Password</label>
+                                    <input
+                                        type="password"
+                                        value={pwForm.confirm}
+                                        onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })}
+                                        required
+                                        style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '12px 14px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                                        placeholder="Re-enter new password"
+                                    />
+                                </div>
+
+                                {pwError && (
+                                    <div style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: '8px', padding: '10px 14px', color: '#E74C3C', fontSize: '13px' }}>
+                                        ⚠️ {pwError}
+                                    </div>
+                                )}
+                                {pwSuccess && (
+                                    <div style={{ background: 'rgba(46,204,113,0.1)', border: '1px solid rgba(46,204,113,0.3)', borderRadius: '8px', padding: '10px 14px', color: '#2ecc71', fontSize: '13px' }}>
+                                        ✓ {pwSuccess}
+                                    </div>
+                                )}
+
+                                <button
+                                    type="submit"
+                                    disabled={pwLoading}
+                                    style={{ background: '#C0392B', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: 700, cursor: pwLoading ? 'not-allowed' : 'pointer', opacity: pwLoading ? 0.7 : 1, marginTop: '4px' }}>
+                                    {pwLoading ? 'Updating...' : 'Update Password'}
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 )}
             </div>

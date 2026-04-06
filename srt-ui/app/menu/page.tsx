@@ -179,7 +179,7 @@ export default function MenuPage() {
       </div>
 
       {/* MAIN CONTENT + CART */}
-      <div className="max-w-7xl mx-auto px-4 py-12 flex gap-6">
+      <div className="max-w-7xl mx-auto px-4 py-12 flex gap-6 relative">
 
         {/* Left — Dishes */}
         <div className="flex-1 min-w-0">
@@ -243,33 +243,63 @@ export default function MenuPage() {
           )}
         </div>
 
-        {/* Right — Cart Side Panel */}
+        {/* Cart — Bottom bar on mobile, side panel on desktop */}
         {totalItems > 0 && (
-          <div style={{ width: '300px', flexShrink: 0 }}>
-            <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '0.5px solid #e5e7eb', position: 'sticky', top: '120px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A1A1A', marginBottom: '16px' }}>
-                🛒 Your Cart ({totalItems})
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                {items.map(item => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ color: '#1A1A1A', fontWeight: 500 }}>{item.name} × {item.quantity}</span>
-                    <span style={{ color: '#C0392B', fontWeight: 700 }}>${(item.price * item.quantity).toFixed(2)}</span>
+          <>
+            {/* Desktop side panel */}
+            <div className="hidden lg:block" style={{ width: '300px', flexShrink: 0 }}>
+              <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '0.5px solid #e5e7eb', position: 'sticky', top: '120px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1A1A1A', marginBottom: '16px' }}>
+                  🛒 Your Cart ({totalItems})
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                  {items.map(item => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <span style={{ color: '#1A1A1A', fontWeight: 500 }}>{item.name} × {item.quantity}</span>
+                      <span style={{ color: '#C0392B', fontWeight: 700 }}>${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: '12px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 700, color: '#1A1A1A' }}>
+                    <span>Total</span>
+                    <span style={{ color: '#C0392B' }}>${total.toFixed(2)}</span>
                   </div>
-                ))}
+                </div>
+                <a href="/order"
+                  style={{ display: 'block', background: '#C0392B', color: '#fff', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
+                  Proceed to Order →
+                </a>
               </div>
-              <div style={{ borderTop: '0.5px solid #e5e7eb', paddingTop: '12px', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 700, color: '#1A1A1A' }}>
-                  <span>Total</span>
-                  <span style={{ color: '#C0392B' }}>${total.toFixed(2)}</span>
+            </div>
+
+            {/* Mobile bottom bar */}
+            <div className="lg:hidden" style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+              background: '#fff', borderTop: '1px solid #e5e7eb',
+              padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              boxShadow: '0 -4px 12px rgba(0,0,0,0.08)'
+            }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>
+                  🛒 {totalItems} item{totalItems > 1 ? 's' : ''}
+                </div>
+                <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                  {items.slice(0, 2).map(i => i.name).join(', ')}{items.length > 2 ? '...' : ''}
                 </div>
               </div>
-              <a href="/order"
-                style={{ display: 'block', background: '#C0392B', color: '#fff', borderRadius: '10px', padding: '12px', fontSize: '14px', fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
-                Proceed to Order →
-              </a>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#C0392B' }}>${total.toFixed(2)}</div>
+                <a href="/order"
+                  style={{ background: '#C0392B', color: '#fff', borderRadius: '20px', padding: '10px 20px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  Order →
+                </a>
+              </div>
             </div>
-          </div>
+
+            {/* Bottom padding so content isn't hidden behind mobile bar */}
+            <div className="lg:hidden" style={{ height: '80px' }} />
+          </>
         )}
 
       </div>
