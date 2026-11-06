@@ -10,3 +10,14 @@
 # VS Code
 .vscode/
 
+
+# Build output
+target/
+node_modules/
+.next/
+out/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
