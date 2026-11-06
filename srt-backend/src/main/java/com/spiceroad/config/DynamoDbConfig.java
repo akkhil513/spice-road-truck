@@ -11,10 +11,6 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 public class DynamoDbConfig {
 
-    public static final String TABLE_NAME = System.getenv("TABLE_NAME") != null ?
-            System.getenv("TABLE_NAME") :
-            "srt-dishes-dev";
-
     @Inject
     DynamoDbClient dynamoDbClient;
 
@@ -28,7 +24,7 @@ public class DynamoDbConfig {
 
     @Produces
     @ApplicationScoped
-    public DynamoDbTable<SRTDish> dishTable(DynamoDbEnhancedClient enhancedClient) {
-        return enhancedClient.table(TABLE_NAME, TableSchema.fromBean(SRTDish.class));
+    public DynamoDbTable<SRTDish> dishTable(DynamoDbEnhancedClient enhancedClient, SrtTables tables) {
+        return enhancedClient.table(tables.dishes(), TableSchema.fromBean(SRTDish.class));
     }
 }

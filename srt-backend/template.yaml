@@ -140,7 +140,8 @@ Resources:
         S3Key: !Sub lambda/srt-backend-dev.zip
       Environment:
         Variables:
-          TABLE_NAME: !Ref DishesTable
+          SRT_DISHES_TABLE: !Ref DishesTable
+          SRT_ORDERS_TABLE: !Ref OrdersTable
           ENVIRONMENT: !Ref Environment
 
   ApiGateway:
