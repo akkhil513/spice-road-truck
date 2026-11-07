@@ -125,6 +125,6 @@ public class DynamoDbConfig {
     @Produces
     @ApplicationScoped
     public DynamoDbTable<SRTDish> dishTable(DynamoDbEnhancedClient enhancedClient, SrtTables tables) {
-        return enhancedClient.table(tables.dishes(), DISH_TABLE_SCHEMA);
+        return enhancedClient.table(tables.table(), DISH_TABLE_SCHEMA);
     }
 }

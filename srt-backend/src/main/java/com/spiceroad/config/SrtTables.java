@@ -2,11 +2,9 @@ package com.spiceroad.config;
 
 import io.smallrye.config.ConfigMapping;
 
-/** DynamoDB table names, injected per environment (see template.yaml / application.properties). */
-@ConfigMapping(prefix = "srt.tables")
+/** Single-table DynamoDB name, injected per environment (see template.yaml / application.properties). */
+@ConfigMapping(prefix = "srt.data")
 public interface SrtTables {
 
-    String dishes();
-
-    String orders();
+    String table();
 }

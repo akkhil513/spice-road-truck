@@ -71,7 +71,7 @@ public class SRTDishRepository {
 
     public String getNextDishId() {
         UpdateItemRequest request = UpdateItemRequest.builder()
-                .tableName(tables.dishes())
+                .tableName(tables.table())
                 .key(Map.of(
                         "pk", AttributeValue.builder().s("COUNTER").build(),
                         "sk", AttributeValue.builder().s("dish-counter").build()

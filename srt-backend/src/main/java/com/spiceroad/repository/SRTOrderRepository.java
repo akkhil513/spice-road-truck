@@ -44,7 +44,7 @@ public class SRTOrderRepository {
     SrtTables tables;
 
     private DynamoDbTable<SRTOrder> table() {
-        return enhancedClient.table(tables.orders(), DynamoDbConfig.ORDER_TABLE_SCHEMA);
+        return enhancedClient.table(tables.table(), DynamoDbConfig.ORDER_TABLE_SCHEMA);
     }
 
     public static String sortKey(String businessDate, String orderNumber) {
@@ -54,7 +54,7 @@ public class SRTOrderRepository {
     /** Atomically increments the counter for the given business day; numbering restarts at 001 each day. */
     public String getNextOrderNumber(String businessDate) {
         UpdateItemRequest request = UpdateItemRequest.builder()
-                .tableName(tables.orders())
+                .tableName(tables.table())
                 .key(Map.of(
                         "pk", AttributeValue.builder().s(COUNTER_PK).build(),
                         "sk", AttributeValue.builder().s(COUNTER_SK_PREFIX + businessDate).build()))
@@ -111,7 +111,7 @@ public class SRTOrderRepository {
      */
     public SRTOrder updateStatus(String sk, String expectedStatus, String newStatus) throws ConditionalCheckFailedException {
         dynamoDbClient.updateItem(UpdateItemRequest.builder()
-                .tableName(tables.orders())
+                .tableName(tables.table())
                 .key(Map.of(
                         "pk", AttributeValue.builder().s(ORDER_PK).build(),
                         "sk", AttributeValue.builder().s(sk).build()))
