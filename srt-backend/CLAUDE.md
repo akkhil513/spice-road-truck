@@ -19,9 +19,13 @@ JWT auth via Cognito; the authorizer is defined in template.yaml.
 4. aws lambda update-function-code (same bucket/key)
 
 ## Current state
-- Live test stack: srt-backend-si (us-east-1). Old dev tables are retained, not managed by CF.
-- Migrating to ONE DynamoDB table `srt-data-<env>` (pk=DISH|ORDER|COUNTER). Code is done;
-  template.yaml still has two tables; data copy from the -dev tables is not done yet.
+- Live stack: srt-backend-si (us-east-1), serving https://api.spiceroadtruck.com
+  (custom domain mapped to the $default stage; mapping created by CLI, NOT in CloudFormation).
+- Single DynamoDB table `srt-data-<env>` (pk=DISH|ORDER|COUNTER) is live in si; data was
+  copied from the old -dev tables. Old srt-dishes-si / srt-orders-si / *-dev tables are
+  retained and unmanaged; delete only with the owner's OK.
+- Not done yet: real dev and prod stacks (si is the temporary live env), UI sends no
+  Authorization header yet, www.spiceroadtruck.com redirect, hardening pass.
 
 ## Gotchas we hit
 - Authorizer IdentitySource must be a LIST, not a string, or CF fails with only
@@ -30,3 +34,10 @@ JWT auth via Cognito; the authorizer is defined in template.yaml.
 - GET /dishes returns 404 when the table is empty (DishService throws NotFoundException).
 - Don't import resources into stacks; create fresh stacks and copy data instead.
 - The cloud shell has no aws or mvn; the user runs those locally and pastes output.
+- Public routes (GET dishes, GET dishes/{id}, POST orders) must declare
+  `AuthorizationType: NONE` explicitly. A route flipped to JWT outside CloudFormation is NOT
+  corrected by a deploy unless the template differs.
+- The ACM cert for api.spiceroadtruck.com expired because its DNS validation CNAMEs were
+  missing. DNS is on CLOUDFLARE (registrar is Squarespace; its DNS page is inactive).
+  Add validation CNAMEs in Cloudflare as DNS only (not proxied).
+- Deploy is template-only when just infra changes; rebuild the zip only when Java changes.
