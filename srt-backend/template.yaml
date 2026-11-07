@@ -14,13 +14,11 @@ Parameters:
     Description: Sales tax as a fraction (0.08 = 8%)
     AllowedPattern: '^0(\.[0-9]{1,4})?$'
   CognitoUserPoolId:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /srt/cognito/user-pool-id
-    Description: Cognito User Pool ID (resolved from Parameter Store)
+    Type: String
+    Description: Cognito User Pool ID (e.g. us-east-1_xxxxxxxx)
   CognitoAppClientId:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /srt/cognito/app-client-id
-    Description: Cognito App Client ID (resolved from Parameter Store)
+    Type: String
+    Description: Cognito SPA App Client ID (no secret)
 
 Conditions:
   IsProd: !Equals [ !Ref Environment, prod ]

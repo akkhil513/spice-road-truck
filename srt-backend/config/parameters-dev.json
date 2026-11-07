@@ -9,10 +9,10 @@
   },
   {
     "ParameterKey": "CognitoUserPoolId",
-    "ParameterValue": "/srt/cognito/user-pool-id"
+    "ParameterValue": "us-east-1_lEeDIOvEb"
   },
   {
     "ParameterKey": "CognitoAppClientId",
-    "ParameterValue": "/srt/cognito/app-client-id"
+    "ParameterValue": "3ru9v2d905sdq0gamndmh0uprq"
   }
 ]
