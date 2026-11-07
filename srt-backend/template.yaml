@@ -267,7 +267,7 @@ Resources:
     Type: AWS::ApiGatewayV2::Stage
     Properties:
       ApiId: !Ref ApiGateway
-      StageName: !Sub ${Environment}
+      StageName: $default
       AutoDeploy: true
       DefaultRouteSettings:
         ThrottlingBurstLimit: 20
