@@ -191,7 +191,7 @@ Resources:
       ApiId: !Ref ApiGateway
       AuthorizerType: JWT
       Name: CognitoAuthorizer
-      IdentitySource: "$request.header.Authorization"
+      IdentitySource: '$request.header.Authorization'
       JwtConfiguration:
         Issuer: !Sub "https://cognito-idp.us-east-1.amazonaws.com/${CognitoUserPoolId}"
         Audience:
