@@ -8,6 +8,11 @@ Parameters:
     AllowedValues:
       - dev
       - prod
+  TaxRate:
+    Type: String
+    Default: '0.08'
+    Description: Sales tax as a fraction (0.08 = 8%)
+    AllowedPattern: '^0(\.[0-9]{1,4})?$'
 
 Conditions:
   IsProd: !Equals [ !Ref Environment, prod ]
@@ -92,7 +97,6 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                   - dynamodb:Query
-                  - dynamodb:Scan
                 Resource:
                   - !GetAtt DishesTable.Arn
                   - !Sub '${DishesTable.Arn}/index/*'
@@ -103,7 +107,6 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                   - dynamodb:Query
-                  - dynamodb:Scan
                 Resource:
                   - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/srt-orders-${Environment}
                   - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/srt-orders-${Environment}/index/*
@@ -142,6 +145,8 @@ Resources:
         Variables:
           SRT_DISHES_TABLE: !Ref DishesTable
           SRT_ORDERS_TABLE: !Ref OrdersTable
+          SRT_TAX_RATE: !Ref TaxRate
+          SRT_TIMEZONE: America/New_York
           ENVIRONMENT: !Ref Environment
 
   ApiGateway:
@@ -233,6 +238,9 @@ Resources:
       ApiId: !Ref ApiGateway
       StageName: !Sub ${Environment}
       AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
 
   LambdaPermission:
     Type: AWS::Lambda::Permission
