@@ -8,6 +8,19 @@ Parameters:
     AllowedValues:
       - dev
       - prod
+  TaxRate:
+    Type: String
+    Default: '0.08'
+    Description: Sales tax as a fraction (0.08 = 8%)
+    AllowedPattern: '^0(\.[0-9]{1,4})?$'
+  CognitoUserPoolId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /srt/cognito/user-pool-id
+    Description: Cognito User Pool ID (resolved from Parameter Store)
+  CognitoAppClientId:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /srt/cognito/app-client-id
+    Description: Cognito App Client ID (resolved from Parameter Store)
 
 Conditions:
   IsProd: !Equals [ !Ref Environment, prod ]
@@ -92,7 +105,6 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                   - dynamodb:Query
-                  - dynamodb:Scan
                 Resource:
                   - !GetAtt DishesTable.Arn
                   - !Sub '${DishesTable.Arn}/index/*'
@@ -103,7 +115,6 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
                   - dynamodb:Query
-                  - dynamodb:Scan
                 Resource:
                   - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/srt-orders-${Environment}
                   - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/srt-orders-${Environment}/index/*
@@ -142,6 +153,8 @@ Resources:
         Variables:
           SRT_DISHES_TABLE: !Ref DishesTable
           SRT_ORDERS_TABLE: !Ref OrdersTable
+          SRT_TAX_RATE: !Ref TaxRate
+          SRT_TIMEZONE: America/New_York
           ENVIRONMENT: !Ref Environment
 
   ApiGateway:
@@ -151,7 +164,8 @@ Resources:
       ProtocolType: HTTP
       CorsConfiguration:
         AllowOrigins:
-          - '*'
+          - 'https://spiceroadtruck.com'
+          - 'http://localhost:3000'
         AllowMethods:
           - GET
           - POST
@@ -159,7 +173,8 @@ Resources:
           - DELETE
           - OPTIONS
         AllowHeaders:
-          - '*'
+          - Content-Type
+          - Authorization
 
   LambdaIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -169,7 +184,20 @@ Resources:
       IntegrationUri: !GetAtt SRTDishesLambdaFunction.Arn
       PayloadFormatVersion: '2.0'
 
-  # Dishes Routes
+  # JWT authorizer — validates Cognito ID tokens before protected routes reach Lambda
+  CognitoAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      ApiId: !Ref ApiGateway
+      AuthorizerType: JWT
+      Name: CognitoAuthorizer
+      IdentitySource: "$request.header.Authorization"
+      JwtConfiguration:
+        Issuer: !Sub "https://cognito-idp.us-east-1.amazonaws.com/${CognitoUserPoolId}"
+        Audience:
+          - !Ref CognitoAppClientId
+
+  # ── Public routes (no auth required) ────────────────────────────────────────
   GetDishesRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -184,35 +212,6 @@ Resources:
       RouteKey: 'GET /srt/v1/dishes/{id}'
       Target: !Sub integrations/${LambdaIntegration}
 
-  PostDishesRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref ApiGateway
-      RouteKey: 'POST /srt/v1/dishes'
-      Target: !Sub integrations/${LambdaIntegration}
-
-  PutDishesRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref ApiGateway
-      RouteKey: 'PUT /srt/v1/dishes/{id}'
-      Target: !Sub integrations/${LambdaIntegration}
-
-  DeleteDishesRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref ApiGateway
-      RouteKey: 'DELETE /srt/v1/dishes/{id}'
-      Target: !Sub integrations/${LambdaIntegration}
-
-  # Orders Routes
-  GetOrdersRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref ApiGateway
-      RouteKey: 'GET /srt/v1/orders'
-      Target: !Sub integrations/${LambdaIntegration}
-
   PostOrdersRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -220,12 +219,51 @@ Resources:
       RouteKey: 'POST /srt/v1/orders'
       Target: !Sub integrations/${LambdaIntegration}
 
+  # ── Protected routes (valid Cognito JWT required) ────────────────────────────
+  PostDishesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /srt/v1/dishes'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  PutDishesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'PUT /srt/v1/dishes/{id}'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  DeleteDishesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'DELETE /srt/v1/dishes/{id}'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  GetOrdersRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'GET /srt/v1/orders'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
   PutOrderStatusRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref ApiGateway
       RouteKey: 'PUT /srt/v1/orders/{sk}/status'
       Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
 
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
@@ -233,6 +271,9 @@ Resources:
       ApiId: !Ref ApiGateway
       StageName: !Sub ${Environment}
       AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
 
   LambdaPermission:
     Type: AWS::Lambda::Permission
