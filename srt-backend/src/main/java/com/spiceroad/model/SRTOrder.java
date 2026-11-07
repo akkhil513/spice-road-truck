@@ -65,6 +65,32 @@ public class SRTOrder {
     @DynamoDbAttribute("status")
     public String getStatus() { return status; }
 
+    public void setPk(String pk) { this.pk = pk; }
+
+    public void setSk(String sk) { this.sk = sk; }
+
+    public void setOrderNumber(String orderNumber) { this.orderNumber = orderNumber; }
+
+    public void setCustomerName(String customerName) { this.customerName = customerName; }
+
+    public void setCustomerEmail(String customerEmail) { this.customerEmail = customerEmail; }
+
+    public void setCardLast4(String cardLast4) { this.cardLast4 = cardLast4; }
+
+    public void setItems(List<OrderItem> items) { this.items = items; }
+
+    public void setSubtotal(double subtotal) { this.subtotal = subtotal; }
+
+    public void setTax(double tax) { this.tax = tax; }
+
+    public void setGrandTotal(double grandTotal) { this.grandTotal = grandTotal; }
+
+    public void setOrderDate(String orderDate) { this.orderDate = orderDate; }
+
+    public void setOrderTime(String orderTime) { this.orderTime = orderTime; }
+
+    public void setStatus(String status) { this.status = status; }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -86,5 +112,13 @@ public class SRTOrder {
 
         @DynamoDbAttribute("quantity")
         public int getQuantity() { return quantity; }
+
+        public void setId(String id) { this.id = id; }
+
+        public void setName(String name) { this.name = name; }
+
+        public void setPrice(double price) { this.price = price; }
+
+        public void setQuantity(int quantity) { this.quantity = quantity; }
     }
 }
