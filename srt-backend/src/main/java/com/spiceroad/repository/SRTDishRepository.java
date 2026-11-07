@@ -1,5 +1,6 @@
 package com.spiceroad.repository;
 
+import com.spiceroad.config.SrtTables;
 import com.spiceroad.model.SRTDish;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -17,8 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.spiceroad.config.DynamoDbConfig.TABLE_NAME;
-
 @ApplicationScoped
 public class SRTDishRepository {
 
@@ -27,6 +26,9 @@ public class SRTDishRepository {
 
     @Inject
     DynamoDbClient dynamoDbClient;
+
+    @Inject
+    SrtTables tables;
 
     public List<SRTDish> getAllDishes() {
         return dishTable.query(QueryConditional.keyEqualTo(Key.builder().partitionValue("DISH").build())).items().stream().collect(Collectors.toList());
@@ -69,7 +71,7 @@ public class SRTDishRepository {
 
     public String getNextDishId() {
         UpdateItemRequest request = UpdateItemRequest.builder()
-                .tableName(TABLE_NAME)
+                .tableName(tables.dishes())
                 .key(Map.of(
                         "pk", AttributeValue.builder().s("COUNTER").build(),
                         "sk", AttributeValue.builder().s("dish-counter").build()

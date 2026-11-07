@@ -1,5 +1,6 @@
 package com.spiceroad.repository;
 
+import com.spiceroad.config.SrtTables;
 import com.spiceroad.model.SRTOrder;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -18,7 +19,6 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class SRTOrderRepository {
 
-    private static final String TABLE_NAME = "srt-orders-dev";
     private static final String ORDER_PK = "ORDER";
     private static final String COUNTER_PK = "COUNTER";
     private static final String COUNTER_SK = "order-counter";
@@ -29,13 +29,16 @@ public class SRTOrderRepository {
     @Inject
     DynamoDbClient dynamoDbClient;
 
+    @Inject
+    SrtTables tables;
+
     private DynamoDbTable<SRTOrder> table() {
-        return enhancedClient.table(TABLE_NAME, TableSchema.fromBean(SRTOrder.class));
+        return enhancedClient.table(tables.orders(), TableSchema.fromBean(SRTOrder.class));
     }
 
     public String getNextOrderNumber() {
         UpdateItemRequest request = UpdateItemRequest.builder()
-                .tableName(TABLE_NAME)
+                .tableName(tables.orders())
                 .key(java.util.Map.of(
                         "pk", AttributeValue.builder().s(COUNTER_PK).build(),
                         "sk", AttributeValue.builder().s(COUNTER_SK).build()
