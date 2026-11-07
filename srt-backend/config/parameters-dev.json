@@ -1,0 +1,18 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "TaxRate",
+    "ParameterValue": "0.08"
+  },
+  {
+    "ParameterKey": "CognitoUserPoolId",
+    "ParameterValue": "/srt/cognito/user-pool-id"
+  },
+  {
+    "ParameterKey": "CognitoAppClientId",
+    "ParameterValue": "/srt/cognito/app-client-id"
+  }
+]

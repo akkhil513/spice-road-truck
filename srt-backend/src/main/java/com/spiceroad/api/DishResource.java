@@ -2,12 +2,16 @@ package com.spiceroad.api;
 
 import com.spiceroad.model.SRTDish;
 import com.spiceroad.service.DishService;
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.util.List;
+
+import static com.spiceroad.config.RoleConstants.*;
 
 @Path("/srt/v1/dishes")
 @Produces(MediaType.APPLICATION_JSON)
@@ -18,6 +22,7 @@ public class DishResource {
     DishService dishService;
 
     @GET
+    @PermitAll
     public Response getDishes(@QueryParam("category") String category) {
         List<SRTDish> dishes;
         if (category != null && !category.trim().isEmpty()) {
@@ -30,12 +35,14 @@ public class DishResource {
 
     @GET
     @Path("/{id}")
+    @PermitAll
     public Response getDishById(@PathParam("id") String id) {
         SRTDish dish = dishService.getDishById(id);
         return Response.ok(dish).build();
     }
 
     @POST
+    @RolesAllowed({ADMIN, MANAGER})
     public Response createDish(SRTDish dish) {
         SRTDish created = dishService.createDish(dish);
         return Response.status(Response.Status.CREATED).entity(created).build();
@@ -43,6 +50,7 @@ public class DishResource {
 
     @PUT
     @Path("/{id}")
+    @RolesAllowed({ADMIN, MANAGER})
     public Response updateDish(@PathParam("id") String id, SRTDish dish) {
         SRTDish updated = dishService.updateDish(id, dish);
         return Response.ok(updated).build();
@@ -50,6 +58,7 @@ public class DishResource {
 
     @DELETE
     @Path("/{id}")
+    @RolesAllowed({ADMIN})
     public Response deleteDish(@PathParam("id") String id) {
         dishService.deleteDish(id);
         return Response.noContent().build();
