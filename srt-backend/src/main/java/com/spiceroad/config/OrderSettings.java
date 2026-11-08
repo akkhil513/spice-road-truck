@@ -14,6 +14,9 @@ public interface OrderSettings {
     /** IANA zone used to decide which "business day" an order belongs to. */
     String timezone();
 
+    /** Local hour (0-23) the business day starts; earlier orders count towards the previous day. */
+    int businessDayStartHour();
+
     /** Maximum number of distinct line items in one order. */
     int maxLines();
 

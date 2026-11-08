@@ -41,3 +41,10 @@ JWT auth via Cognito; the authorizer is defined in template.yaml.
   missing. DNS is on CLOUDFLARE (registrar is Squarespace; its DNS page is inactive).
   Add validation CNAMEs in Cloudflare as DNS only (not proxied).
 - Deploy is template-only when just infra changes; rebuild the zip only when Java changes.
+
+## Order data model (P1.1)
+- Business day starts at 04:00 local (`srt.orders.business-day-start-hour`): earlier orders count toward the previous day. Order numbers restart at 001 each business day; one shared counter `COUNTER / order-counter#<date>`, prefix by source (`OrderSource`: SRT- own channels, UE- Uber Eats, DD- DoorDash).
+- Order item (`pk=ORDER`, `sk=<businessDate>_<orderNumber>`) new optional fields: `source`, `orderType`, `tableNumber`, `paymentStatus`, `payments[]` (whole cents), `sentToKitchenAt`, `orderVersion`, `customerPhone` (E.164), `externalOrderId`, `gsiOpen`; each line has `lineId` + `itemStatus`. `entityVersion` is now 2 for new orders; old orders (v1) have these fields null.
+- `gsiOpen="OPEN"` only while an order is not final; it is REMOVEd when COMPLETED/CANCELLED (sparse GSI `open-index`, `getOpenOrders`). Adding the GSI needs a template deploy BEFORE the new Lambda code is used.
+- Customers: `pk=CUSTOMER`, `sk=<E.164 phone>` (`SRTCustomerRepository`, used by P1.6).
+- Public `POST /orders` never trusts client-sent source, order type, payment, item status or version: `OrderAssembler` sets them (ONLINE, TO_GO, UNPAID, PENDING). New rules live in small pure classes (`BusinessDay`, `PhoneNumbers`, `OrderSource`, `OrderAssembler`) with plain JUnit tests; there is no Mockito.

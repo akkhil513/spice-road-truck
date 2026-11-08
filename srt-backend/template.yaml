@@ -42,6 +42,7 @@ Resources:
         - { AttributeName: pk, AttributeType: S }
         - { AttributeName: sk, AttributeType: S }
         - { AttributeName: category, AttributeType: S }
+        - { AttributeName: gsiOpen, AttributeType: S }
       KeySchema:
         - { AttributeName: pk, KeyType: HASH }
         - { AttributeName: sk, KeyType: RANGE }
@@ -49,6 +50,12 @@ Resources:
         - IndexName: category-index
           KeySchema:
             - { AttributeName: category, KeyType: HASH }
+            - { AttributeName: sk, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+        # Sparse index: only orders that are still open carry gsiOpen
+        - IndexName: open-index
+          KeySchema:
+            - { AttributeName: gsiOpen, KeyType: HASH }
             - { AttributeName: sk, KeyType: RANGE }
           Projection: { ProjectionType: ALL }
 

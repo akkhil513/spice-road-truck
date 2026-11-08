@@ -31,7 +31,6 @@ public class OrderService {
     private static final int MAX_EMAIL_LENGTH = 254;
     private static final int DEFAULT_PAGE_SIZE = 100;
     private static final int MAX_PAGE_SIZE = 200;
-    private static final int CURRENT_ENTITY_VERSION = 1;
     private static final Pattern CARD_LAST4 = Pattern.compile("\\d{4}");
     private static final Pattern EMAIL = Pattern.compile("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("hh:mm a");
@@ -52,12 +51,14 @@ public class OrderService {
     void init() {
         pricing = new PricingCalculator(settings.taxRate(), settings.maxLines(), settings.maxQuantity());
         clock = Clock.system(ZoneId.of(settings.timezone()));
+        BusinessDay.requireValidStartHour(settings.businessDayStartHour());
     }
 
     /**
-     * Builds the stored order from scratch. Only item ids/quantities, the customer's name and
-     * email, and the card's last four digits are taken from the request; prices, totals, status,
-     * keys and timestamps all come from the server.
+     * Builds the stored order from scratch. Only item ids/quantities, the customer's name, email
+     * and phone, and the card's last four digits are taken from the request. Prices, totals, status,
+     * source, order type, payment status, item status, keys and timestamps all come from the server;
+     * this public route always creates an unpaid online to-go order.
      */
     public SRTOrder placeOrder(SRTOrder request) {
         if (request == null) {
@@ -66,28 +67,18 @@ public class OrderService {
         String name = cleanName(request.getCustomerName());
         String email = cleanEmail(request.getCustomerEmail());
         String cardLast4 = cleanCardLast4(request.getCardLast4());
+        String phone = PhoneNumbers.normalize(request.getCustomerPhone());
 
         PricingCalculator.PricedOrder priced = pricing.price(request.getItems(), dishRepository::getDishById);
 
         ZonedDateTime now = ZonedDateTime.now(clock);
-        String businessDate = now.toLocalDate().toString();
-        String orderNumber = orderRepository.getNextOrderNumber(businessDate);
+        String businessDate = BusinessDay.of(now, settings.businessDayStartHour()).toString();
+        OrderSource source = OrderSource.ONLINE;
+        String orderNumber = source.formatNumber(orderRepository.getNextOrderCount(businessDate));
 
-        SRTOrder order = new SRTOrder();
-        order.setPk("ORDER");
-        order.setSk(SRTOrderRepository.sortKey(businessDate, orderNumber));
-        order.setOrderNumber(orderNumber);
-        order.setCustomerName(name);
-        order.setCustomerEmail(email);
-        order.setCardLast4(cardLast4);
-        order.setItems(priced.items());
-        order.setSubtotal(priced.subtotal().doubleValue());
-        order.setTax(priced.tax().doubleValue());
-        order.setGrandTotal(priced.total().doubleValue());
-        order.setOrderDate(businessDate);
-        order.setOrderTime(now.format(TIME_FORMAT));
-        order.setStatus(OrderStatus.NEW.name());
-        order.setEntityVersion(CURRENT_ENTITY_VERSION);
+        SRTOrder order = OrderAssembler.assemble(
+                new OrderAssembler.Customer(name, email, cardLast4, phone),
+                priced, source, OrderType.TO_GO, businessDate, orderNumber, now.format(TIME_FORMAT));
 
         try {
             SRTOrder saved = orderRepository.saveNewOrder(order);
@@ -99,9 +90,11 @@ public class OrderService {
         }
     }
 
-    /** One page of a business day's orders (today in the configured timezone if no date is given). */
+    /** One page of a business day's orders (the current business day if no date is given). */
     public List<SRTOrder> getOrders(String date, Integer limit, String after) {
-        String businessDate = date == null || date.isBlank() ? LocalDate.now(clock).toString() : parseDate(date);
+        String businessDate = date == null || date.isBlank()
+                ? BusinessDay.of(ZonedDateTime.now(clock), settings.businessDayStartHour()).toString()
+                : parseDate(date);
         int pageSize = limit == null ? DEFAULT_PAGE_SIZE : Math.max(1, Math.min(limit, MAX_PAGE_SIZE));
         return orderRepository.getOrdersForDate(businessDate, pageSize, after);
     }
@@ -122,7 +115,7 @@ public class OrderService {
             throw new ClientErrorException("Order is " + from + " and cannot move to " + next, Response.Status.CONFLICT);
         }
         try {
-            SRTOrder updated = orderRepository.updateStatus(sk, from.name(), next.name());
+            SRTOrder updated = orderRepository.updateStatus(sk, from.name(), next.name(), next.isFinal());
             LOG.infof("Order %s: %s -> %s", current.getOrderNumber(), from, next);
             return updated;
         } catch (ConditionalCheckFailedException e) {

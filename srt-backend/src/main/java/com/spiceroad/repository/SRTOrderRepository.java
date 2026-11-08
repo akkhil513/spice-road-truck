@@ -15,6 +15,8 @@ import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
+import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 import software.amazon.awssdk.services.dynamodb.model.ReturnValue;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemResponse;
@@ -32,7 +34,7 @@ public class SRTOrderRepository {
     private static final String ORDER_PK = "ORDER";
     private static final String COUNTER_PK = "COUNTER";
     private static final String COUNTER_SK_PREFIX = "order-counter#";
-    private static final String ORDER_NUMBER_PREFIX = "SRT-";
+    private static final String OPEN_INDEX = "open-index";
 
     @Inject
     DynamoDbEnhancedClient enhancedClient;
@@ -51,8 +53,11 @@ public class SRTOrderRepository {
         return businessDate + "_" + orderNumber;
     }
 
-    /** Atomically increments the counter for the given business day; numbering restarts at 001 each day. */
-    public String getNextOrderNumber(String businessDate) {
+    /**
+     * Atomically increments the counter for the given business day and returns the new value.
+     * One count is shared by every order source; the caller adds the source prefix.
+     */
+    public long getNextOrderCount(String businessDate) {
         UpdateItemRequest request = UpdateItemRequest.builder()
                 .tableName(tables.table())
                 .key(Map.of(
@@ -67,8 +72,7 @@ public class SRTOrderRepository {
                 .build();
 
         UpdateItemResponse response = dynamoDbClient.updateItem(request);
-        long count = Long.parseLong(response.attributes().get("count").n());
-        return String.format(ORDER_NUMBER_PREFIX + "%03d", count);
+        return Long.parseLong(response.attributes().get("count").n());
     }
 
     /** Fails with ConditionalCheckFailedException if an order with this key already exists. */
@@ -106,16 +110,40 @@ public class SRTOrderRepository {
     }
 
     /**
-     * Changes the status only if it is still {@code expectedStatus}, so two people editing at once
-     * cannot silently overwrite each other. Throws ConditionalCheckFailedException on a mismatch.
+     * One page of open (not final) orders across all days, oldest first, read from the sparse
+     * open-index. Pass the last sort key of the previous page as {@code after} for the next page.
      */
-    public SRTOrder updateStatus(String sk, String expectedStatus, String newStatus) throws ConditionalCheckFailedException {
+    public List<SRTOrder> getOpenOrders(int limit, String after) {
+        QueryRequest.Builder request = QueryRequest.builder()
+                .tableName(tables.table())
+                .indexName(OPEN_INDEX)
+                .keyConditionExpression("#open = :open")
+                .expressionAttributeNames(Map.of("#open", "gsiOpen"))
+                .expressionAttributeValues(Map.of(":open", AttributeValue.builder().s(SRTOrder.OPEN).build()))
+                .scanIndexForward(true)
+                .limit(limit);
+        if (after != null && !after.isBlank()) {
+            request.exclusiveStartKey(Map.of(
+                    "pk", AttributeValue.builder().s(ORDER_PK).build(),
+                    "sk", AttributeValue.builder().s(after).build(),
+                    "gsiOpen", AttributeValue.builder().s(SRTOrder.OPEN).build()));
+        }
+        QueryResponse response = dynamoDbClient.query(request.build());
+        return response.items().stream().map(DynamoDbConfig.ORDER_TABLE_SCHEMA::mapToItem).toList();
+    }
+
+    /**
+     * Changes the status only if it is still {@code expectedStatus}, so two people editing at once
+     * cannot silently overwrite each other. When the new status is final the order also leaves the
+     * open-index. Throws ConditionalCheckFailedException on a mismatch.
+     */
+    public SRTOrder updateStatus(String sk, String expectedStatus, String newStatus, boolean closing) throws ConditionalCheckFailedException {
         dynamoDbClient.updateItem(UpdateItemRequest.builder()
                 .tableName(tables.table())
                 .key(Map.of(
                         "pk", AttributeValue.builder().s(ORDER_PK).build(),
                         "sk", AttributeValue.builder().s(sk).build()))
-                .updateExpression("SET #status = :new")
+                .updateExpression(closing ? "SET #status = :new REMOVE gsiOpen" : "SET #status = :new")
                 .conditionExpression("#status = :expected")
                 .expressionAttributeNames(Map.of("#status", "status"))
                 .expressionAttributeValues(Map.of(

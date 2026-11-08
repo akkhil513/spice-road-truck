@@ -1,8 +1,10 @@
 package com.spiceroad.config;
 
+import com.spiceroad.model.SRTCustomer;
 import com.spiceroad.model.SRTDish;
 import com.spiceroad.model.SRTOrder;
 import com.spiceroad.model.SRTOrder.OrderItem;
+import com.spiceroad.model.SRTOrder.Payment;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Produces;
@@ -15,6 +17,25 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.StaticTableSchema;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 public class DynamoDbConfig {
+    private static final TableSchema<Payment> PAYMENT_SCHEMA = StaticTableSchema.builder(Payment.class)
+            .newItemSupplier(Payment::new)
+            .addAttribute(String.class, a -> a.name("type")
+                    .getter(Payment::getType)
+                    .setter(Payment::setType))
+            .addAttribute(String.class, a -> a.name("method")
+                    .getter(Payment::getMethod)
+                    .setter(Payment::setMethod))
+            .addAttribute(Long.class, a -> a.name("amountCents")
+                    .getter(Payment::getAmountCents)
+                    .setter(Payment::setAmountCents))
+            .addAttribute(String.class, a -> a.name("at")
+                    .getter(Payment::getAt)
+                    .setter(Payment::setAt))
+            .addAttribute(String.class, a -> a.name("reason")
+                    .getter(Payment::getReason)
+                    .setter(Payment::setReason))
+            .build();
+
     private static final TableSchema<OrderItem> ORDER_ITEM_SCHEMA = StaticTableSchema.builder(OrderItem.class)
             .newItemSupplier(OrderItem::new)
             .addAttribute(String.class, a -> a.name("id")
@@ -29,6 +50,12 @@ public class DynamoDbConfig {
             .addAttribute(Integer.class, a -> a.name("quantity")
                     .getter(OrderItem::getQuantity)
                     .setter(OrderItem::setQuantity))
+            .addAttribute(String.class, a -> a.name("lineId")
+                    .getter(OrderItem::getLineId)
+                    .setter(OrderItem::setLineId))
+            .addAttribute(String.class, a -> a.name("itemStatus")
+                    .getter(OrderItem::getItemStatus)
+                    .setter(OrderItem::setItemStatus))
             .build();
 
     public static final TableSchema<SRTOrder> ORDER_TABLE_SCHEMA = StaticTableSchema.builder(SRTOrder.class)
@@ -78,6 +105,61 @@ public class DynamoDbConfig {
             .addAttribute(Integer.class, a -> a.name("entityVersion")
                     .getter(SRTOrder::getEntityVersion)
                     .setter(SRTOrder::setEntityVersion))
+            .addAttribute(String.class, a -> a.name("source")
+                    .getter(SRTOrder::getSource)
+                    .setter(SRTOrder::setSource))
+            .addAttribute(String.class, a -> a.name("orderType")
+                    .getter(SRTOrder::getOrderType)
+                    .setter(SRTOrder::setOrderType))
+            .addAttribute(String.class, a -> a.name("tableNumber")
+                    .getter(SRTOrder::getTableNumber)
+                    .setter(SRTOrder::setTableNumber))
+            .addAttribute(String.class, a -> a.name("paymentStatus")
+                    .getter(SRTOrder::getPaymentStatus)
+                    .setter(SRTOrder::setPaymentStatus))
+            .addAttribute(EnhancedType.listOf(EnhancedType.documentOf(Payment.class, PAYMENT_SCHEMA)),
+                    a -> a.name("payments")
+                            .getter(SRTOrder::getPayments)
+                            .setter(SRTOrder::setPayments))
+            .addAttribute(String.class, a -> a.name("sentToKitchenAt")
+                    .getter(SRTOrder::getSentToKitchenAt)
+                    .setter(SRTOrder::setSentToKitchenAt))
+            .addAttribute(Integer.class, a -> a.name("orderVersion")
+                    .getter(SRTOrder::getOrderVersion)
+                    .setter(SRTOrder::setOrderVersion))
+            .addAttribute(String.class, a -> a.name("customerPhone")
+                    .getter(SRTOrder::getCustomerPhone)
+                    .setter(SRTOrder::setCustomerPhone))
+            .addAttribute(String.class, a -> a.name("externalOrderId")
+                    .getter(SRTOrder::getExternalOrderId)
+                    .setter(SRTOrder::setExternalOrderId))
+            .addAttribute(String.class, a -> a.name("gsiOpen")
+                    .getter(SRTOrder::getGsiOpen)
+                    .setter(SRTOrder::setGsiOpen))
+            .build();
+
+    public static final TableSchema<SRTCustomer> CUSTOMER_TABLE_SCHEMA = StaticTableSchema.builder(SRTCustomer.class)
+            .newItemSupplier(SRTCustomer::new)
+            .addAttribute(String.class, a -> a.name("pk")
+                    .getter(SRTCustomer::getPk)
+                    .setter(SRTCustomer::setPk)
+                    .tags(StaticAttributeTags.primaryPartitionKey()))
+            .addAttribute(String.class, a -> a.name("sk")
+                    .getter(SRTCustomer::getSk)
+                    .setter(SRTCustomer::setSk)
+                    .tags(StaticAttributeTags.primarySortKey()))
+            .addAttribute(String.class, a -> a.name("name")
+                    .getter(SRTCustomer::getName)
+                    .setter(SRTCustomer::setName))
+            .addAttribute(Boolean.class, a -> a.name("smsOptIn")
+                    .getter(SRTCustomer::isSmsOptIn)
+                    .setter(SRTCustomer::setSmsOptIn))
+            .addAttribute(String.class, a -> a.name("createdAt")
+                    .getter(SRTCustomer::getCreatedAt)
+                    .setter(SRTCustomer::setCreatedAt))
+            .addAttribute(Integer.class, a -> a.name("entityVersion")
+                    .getter(SRTCustomer::getEntityVersion)
+                    .setter(SRTCustomer::setEntityVersion))
             .build();
 
     private static final TableSchema<SRTDish> DISH_TABLE_SCHEMA = StaticTableSchema.builder(SRTDish.class)
