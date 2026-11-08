@@ -112,8 +112,10 @@ public class SRTOrderRepository {
     /**
      * One page of open (not final) orders across all days, oldest first, read from the sparse
      * open-index. Pass the last sort key of the previous page as {@code after} for the next page.
+     * With {@code sentToKitchenOnly} the orders not yet sent to the kitchen are filtered out; the
+     * limit counts index entries read, so a page can hold fewer orders than the limit.
      */
-    public List<SRTOrder> getOpenOrders(int limit, String after) {
+    public List<SRTOrder> getOpenOrders(int limit, String after, boolean sentToKitchenOnly) {
         QueryRequest.Builder request = QueryRequest.builder()
                 .tableName(tables.table())
                 .indexName(OPEN_INDEX)
@@ -122,6 +124,9 @@ public class SRTOrderRepository {
                 .expressionAttributeValues(Map.of(":open", AttributeValue.builder().s(SRTOrder.OPEN).build()))
                 .scanIndexForward(true)
                 .limit(limit);
+        if (sentToKitchenOnly) {
+            request.filterExpression("attribute_exists(sentToKitchenAt)");
+        }
         if (after != null && !after.isBlank()) {
             request.exclusiveStartKey(Map.of(
                     "pk", AttributeValue.builder().s(ORDER_PK).build(),
@@ -149,6 +154,48 @@ public class SRTOrderRepository {
                 .expressionAttributeValues(Map.of(
                         ":new", AttributeValue.builder().s(newStatus).build(),
                         ":expected", AttributeValue.builder().s(expectedStatus).build()))
+                .build());
+        return getOrder(sk);
+    }
+
+    /**
+     * Sets one line's kitchen status and the order status that follows from it, in one write.
+     * The write only happens if that line is still in {@code from}, the order status and the
+     * revision counter are unchanged since they were read; otherwise it throws
+     * ConditionalCheckFailedException and nothing changes. {@code seenRevision} is null for
+     * orders saved before the counter existed.
+     */
+    public SRTOrder updateItemStatus(String sk, int index, String lineId, String from, String to,
+                                     String seenOrderStatus, String newOrderStatus, Integer seenRevision)
+            throws ConditionalCheckFailedException {
+        String line = "#items[" + index + "]";
+        Map<String, String> names = Map.of(
+                "#items", "items", "#is", "itemStatus", "#lid", "lineId",
+                "#st", "status", "#rev", "kitchenRevision");
+        Map<String, AttributeValue> values = new java.util.HashMap<>(Map.of(
+                ":line", AttributeValue.builder().s(lineId).build(),
+                ":from", AttributeValue.builder().s(from).build(),
+                ":to", AttributeValue.builder().s(to).build(),
+                ":seenStatus", AttributeValue.builder().s(seenOrderStatus).build(),
+                ":newStatus", AttributeValue.builder().s(newOrderStatus).build(),
+                ":nextRev", AttributeValue.builder().n(String.valueOf(seenRevision == null ? 1 : seenRevision + 1)).build()));
+        String revisionCondition;
+        if (seenRevision == null) {
+            revisionCondition = "attribute_not_exists(#rev)";
+        } else {
+            revisionCondition = "#rev = :seenRev";
+            values.put(":seenRev", AttributeValue.builder().n(String.valueOf(seenRevision)).build());
+        }
+        dynamoDbClient.updateItem(UpdateItemRequest.builder()
+                .tableName(tables.table())
+                .key(Map.of(
+                        "pk", AttributeValue.builder().s(ORDER_PK).build(),
+                        "sk", AttributeValue.builder().s(sk).build()))
+                .updateExpression("SET " + line + ".#is = :to, #st = :newStatus, #rev = :nextRev")
+                .conditionExpression(line + ".#lid = :line AND " + line + ".#is = :from AND #st = :seenStatus AND "
+                        + revisionCondition)
+                .expressionAttributeNames(names)
+                .expressionAttributeValues(values)
                 .build());
         return getOrder(sk);
     }

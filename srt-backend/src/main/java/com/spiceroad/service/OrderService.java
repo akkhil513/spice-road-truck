@@ -58,7 +58,7 @@ public class OrderService {
      * Builds the stored order from scratch. Only item ids/quantities, the customer's name, email
      * and phone, and the card's last four digits are taken from the request. Prices, totals, status,
      * source, order type, payment status, item status, keys and timestamps all come from the server;
-     * this public route always creates an unpaid online to-go order.
+     * this public route always creates an unpaid online to-go order, sent to the kitchen at once.
      */
     public SRTOrder placeOrder(SRTOrder request) {
         if (request == null) {
@@ -78,7 +78,8 @@ public class OrderService {
 
         SRTOrder order = OrderAssembler.assemble(
                 new OrderAssembler.Customer(name, email, cardLast4, phone),
-                priced, source, OrderType.TO_GO, businessDate, orderNumber, now.format(TIME_FORMAT));
+                priced, source, OrderType.TO_GO, businessDate, orderNumber, now.format(TIME_FORMAT),
+                now.toInstant().toString());
 
         try {
             SRTOrder saved = orderRepository.saveNewOrder(order);
@@ -95,8 +96,11 @@ public class OrderService {
         String businessDate = date == null || date.isBlank()
                 ? BusinessDay.of(ZonedDateTime.now(clock), settings.businessDayStartHour()).toString()
                 : parseDate(date);
-        int pageSize = limit == null ? DEFAULT_PAGE_SIZE : Math.max(1, Math.min(limit, MAX_PAGE_SIZE));
-        return orderRepository.getOrdersForDate(businessDate, pageSize, after);
+        return orderRepository.getOrdersForDate(businessDate, pageSize(limit), after);
+    }
+
+    static int pageSize(Integer limit) {
+        return limit == null ? DEFAULT_PAGE_SIZE : Math.clamp(limit, 1, MAX_PAGE_SIZE);
     }
 
     public SRTOrder updateStatus(String sk, String requestedStatus) {
@@ -123,7 +127,7 @@ public class OrderService {
         }
     }
 
-    private static String parseDate(String date) {
+    static String parseDate(String date) {
         try {
             return LocalDate.parse(date).toString();
         } catch (DateTimeParseException e) {

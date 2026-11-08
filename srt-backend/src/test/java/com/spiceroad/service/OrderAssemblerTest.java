@@ -28,7 +28,8 @@ class OrderAssemblerTest {
                 new BigDecimal("22.97"), new BigDecimal("1.84"), new BigDecimal("24.81"));
         return OrderAssembler.assemble(
                 new OrderAssembler.Customer("Akki", "a@example.com", "4242", "+14045550142"),
-                pricedOrder, source, type, "2026-11-06", source.formatNumber(3), "08:41 PM");
+                pricedOrder, source, type, "2026-11-06", source.formatNumber(3), "08:41 PM",
+                "2026-11-07T00:41:00Z");
     }
 
     @Test
@@ -50,7 +51,8 @@ class OrderAssemblerTest {
         assertEquals(Integer.valueOf(1), order.getOrderVersion());
         assertEquals(OrderAssembler.CURRENT_ENTITY_VERSION, order.getEntityVersion());
         assertEquals(SRTOrder.OPEN, order.getGsiOpen());
-        assertNull(order.getSentToKitchenAt());
+        assertEquals("2026-11-07T00:41:00Z", order.getSentToKitchenAt());
+        assertEquals(Integer.valueOf(0), order.getKitchenRevision());
         assertNull(order.getExternalOrderId());
         assertNull(order.getTableNumber());
     }

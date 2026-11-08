@@ -48,3 +48,10 @@ JWT auth via Cognito; the authorizer is defined in template.yaml.
 - `gsiOpen="OPEN"` only while an order is not final; it is REMOVEd when COMPLETED/CANCELLED (sparse GSI `open-index`, `getOpenOrders`). Adding the GSI needs a template deploy BEFORE the new Lambda code is used.
 - Customers: `pk=CUSTOMER`, `sk=<E.164 phone>` (`SRTCustomerRepository`, used by P1.6).
 - Public `POST /orders` never trusts client-sent source, order type, payment, item status or version: `OrderAssembler` sets them (ONLINE, TO_GO, UNPAID, PENDING). New rules live in small pure classes (`BusinessDay`, `PhoneNumbers`, `OrderSource`, `OrderAssembler`) with plain JUnit tests; there is no Mockito.
+
+## Kitchen endpoints (P1.2)
+- `GET /srt/v1/kitchen/orders` (staff/manager/admin): open orders already sent to the kitchen (`sentToKitchenAt` set), oldest first, via `open-index` + filter. `?completed=true[&date=]` lists finished kitchen orders of a business day instead. Returns `KitchenOrder` (no email, phone, card ref, prices or payments).
+- `PUT /srt/v1/kitchen/orders/{sk}/items/{lineId}/status` body `{"from":"PENDING","to":"TICKED"}`. One step forward (tick, clear) or one step back (recall) only; 409 if the item is no longer in `from`, the order is final or not sent to the kitchen. `ItemTransition` decides, `SRTOrderRepository.updateItemStatus` writes conditionally (line status, order status and `kitchenRevision` must be unchanged).
+- Order status follows the lines while open: all PENDING = NEW, all CLEARED = READY, anything else = PREPARING (`KitchenProgress`). Counter staff still mark COMPLETED at pickup via `PUT /orders/{sk}/status`, which does not touch item statuses.
+- Website orders (`source=ONLINE`) are sent to the kitchen when placed; orders created before P1.2 have no `sentToKitchenAt` and never appear in the kitchen list. Counter send/hold rules come in P1.3.
+- Two new JWT routes in `template.yaml` must be deployed before the new code is used.

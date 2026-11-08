@@ -136,6 +136,9 @@ public class DynamoDbConfig {
             .addAttribute(String.class, a -> a.name("gsiOpen")
                     .getter(SRTOrder::getGsiOpen)
                     .setter(SRTOrder::setGsiOpen))
+            .addAttribute(Integer.class, a -> a.name("kitchenRevision")
+                    .getter(SRTOrder::getKitchenRevision)
+                    .setter(SRTOrder::setKitchenRevision))
             .build();
 
     public static final TableSchema<SRTCustomer> CUSTOMER_TABLE_SCHEMA = StaticTableSchema.builder(SRTCustomer.class)

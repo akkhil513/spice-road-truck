@@ -3,6 +3,7 @@ package com.spiceroad.service;
 import com.spiceroad.model.SRTOrder;
 import com.spiceroad.model.SRTOrder.OrderItem;
 import com.spiceroad.repository.SRTOrderRepository;
+import jakarta.annotation.Nonnull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,19 +31,9 @@ public final class OrderAssembler {
                                     OrderType orderType,
                                     String businessDate,
                                     String orderNumber,
-                                    String orderTime) {
-        List<OrderItem> items = new ArrayList<>(priced.items().size());
-        int line = 1;
-        for (OrderItem pricedItem : priced.items()) {
-            OrderItem item = new OrderItem();
-            item.setId(pricedItem.getId());
-            item.setName(pricedItem.getName());
-            item.setPrice(pricedItem.getPrice());
-            item.setQuantity(pricedItem.getQuantity());
-            item.setLineId("L" + line++);
-            item.setItemStatus(ItemStatus.PENDING.name());
-            items.add(item);
-        }
+                                    String orderTime,
+                                    String sentToKitchenAt) {
+        List<OrderItem> items = getOrderItems(priced);
 
         SRTOrder order = new SRTOrder();
         order.setPk(ORDER_PK);
@@ -64,8 +55,27 @@ public final class OrderAssembler {
         order.setPaymentStatus(PaymentStatus.UNPAID.name());
         order.setPayments(new ArrayList<>());
         order.setOrderVersion(1);
+        order.setSentToKitchenAt(sentToKitchenAt);
+        order.setKitchenRevision(0);
         order.setGsiOpen(SRTOrder.OPEN);
         order.setEntityVersion(CURRENT_ENTITY_VERSION);
         return order;
+    }
+
+    @Nonnull
+    private static List<OrderItem> getOrderItems(PricingCalculator.PricedOrder priced) {
+        List<OrderItem> items = new ArrayList<>(priced.items().size());
+        int line = 1;
+        for (OrderItem pricedItem : priced.items()) {
+            OrderItem item = new OrderItem();
+            item.setId(pricedItem.getId());
+            item.setName(pricedItem.getName());
+            item.setPrice(pricedItem.getPrice());
+            item.setQuantity(pricedItem.getQuantity());
+            item.setLineId("L" + line++);
+            item.setItemStatus(ItemStatus.PENDING.name());
+            items.add(item);
+        }
+        return items;
     }
 }

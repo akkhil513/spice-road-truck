@@ -39,6 +39,7 @@ public class SRTOrder {
     private String customerPhone;
     private String externalOrderId;
     private String gsiOpen;
+    private Integer kitchenRevision;
 
     @DynamoDbPartitionKey
     public String getPk() { return pk; }
@@ -112,6 +113,10 @@ public class SRTOrder {
     /** Present only while the order is open; backs the sparse open-index GSI. */
     @DynamoDbAttribute("gsiOpen")
     public String getGsiOpen() { return gsiOpen; }
+
+    /** Counts item status changes; lets two kitchen screens detect that they raced each other. */
+    @DynamoDbAttribute("kitchenRevision")
+    public Integer getKitchenRevision() { return kitchenRevision; }
 
     @Data
     @NoArgsConstructor
