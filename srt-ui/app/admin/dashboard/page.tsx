@@ -39,6 +39,17 @@ interface Order {
 
 const API = 'https://api.spiceroadtruck.com';
 
+// Attaches the Cognito ID token (carries the cognito:groups claim the API authorizes on).
+const authFetch = async (url: string, init: RequestInit = {}) => {
+    const session = await fetchAuthSession();
+    const idToken = session.tokens?.idToken?.toString();
+    if (!idToken) throw new Error('Not signed in');
+    return fetch(url, {
+        ...init,
+        headers: { ...(init.headers || {}), Authorization: `Bearer ${idToken}` },
+    });
+};
+
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
     NEW: { bg: 'rgba(59,130,246,0.2)', color: '#60a5fa' },
     PREPARING: { bg: 'rgba(234,179,8,0.2)', color: '#facc15' },
@@ -110,7 +121,7 @@ export default function AdminDashboard() {
     const loadOrders = async () => {
         setOrdersLoading(true);
         try {
-            const res = await fetch(`${API}/srt/v1/orders`);
+            const res = await authFetch(`${API}/srt/v1/orders`);
             const data = await res.json();
             const ordersList = Array.isArray(data) ? data : [data];
             ordersList.sort((a: Order, b: Order) => b.orderNumber?.localeCompare(a.orderNumber));
@@ -124,7 +135,7 @@ export default function AdminDashboard() {
 
     const handleStatusUpdate = async (sk: string, status: string) => {
         try {
-            await fetch(`${API}/srt/v1/orders/${sk}/status`, {
+            await authFetch(`${API}/srt/v1/orders/${sk}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status }),
@@ -145,9 +156,9 @@ export default function AdminDashboard() {
         const body = { name: form.name, description: form.description, price: parseFloat(form.price), category: form.category, imageUrl: form.imageUrl };
         try {
             if (editingDish) {
-                await fetch(`${API}/srt/v1/dishes/${editingDish.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                await authFetch(`${API}/srt/v1/dishes/${editingDish.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
             } else {
-                await fetch(`${API}/srt/v1/dishes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                await authFetch(`${API}/srt/v1/dishes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
             }
             setShowForm(false);
             setEditingDish(null);
@@ -169,7 +180,7 @@ export default function AdminDashboard() {
     const handleDelete = async (id: string) => {
         if (!confirm('Delete this dish?')) return;
         try {
-            await fetch(`${API}/srt/v1/dishes/${id}`, { method: 'DELETE' });
+            await authFetch(`${API}/srt/v1/dishes/${id}`, { method: 'DELETE' });
             loadDishes();
         } catch {
             setError('Failed to delete dish');

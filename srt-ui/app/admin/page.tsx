@@ -1,8 +1,40 @@
 'use client';
 
-import { signIn, confirmSignIn } from 'aws-amplify/auth';
+import { signIn, confirmSignIn, resetPassword, confirmResetPassword } from 'aws-amplify/auth';
 import '../../lib/auth';
 import { useState, useEffect } from 'react';
+
+const fieldStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '8px',
+    padding: '12px 16px',
+    color: '#fff',
+    fontSize: '14px',
+    outline: 'none',
+};
+
+const primaryButtonStyle = (loading: boolean): React.CSSProperties => ({
+    background: '#C0392B',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '12px',
+    fontSize: '15px',
+    fontWeight: 600,
+    cursor: loading ? 'not-allowed' : 'pointer',
+    opacity: loading ? 0.7 : 1,
+});
+
+const linkButtonStyle: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: '13px',
+    cursor: 'pointer',
+    padding: 0,
+    textAlign: 'center',
+};
 
 export default function AdminLogin() {
     const [email, setEmail] = useState('');
@@ -11,6 +43,9 @@ export default function AdminLogin() {
     const [needsNewPassword, setNeedsNewPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [mode, setMode] = useState<'login' | 'forgot' | 'reset'>('login');
+    const [code, setCode] = useState('');
+    const [info, setInfo] = useState('');
 
     useEffect(() => {
         import('aws-amplify/auth').then(({ signOut }) => {
@@ -32,9 +67,62 @@ export default function AdminLogin() {
                 return;
             }
 
-            window.location.href = '/';
+            if (!result.isSignedIn) {
+                setError(`Sign-in not complete: ${result.nextStep.signInStep}`);
+                setLoading(false);
+                return;
+            }
+
+            window.location.href = '/admin/dashboard';
         } catch (err: any) {
+            if (err?.name === 'PasswordResetRequiredException') {
+                try {
+                    await sendCode();
+                } catch (resetErr: any) {
+                    setError(resetErr.message || 'Could not send code');
+                }
+                setLoading(false);
+                return;
+            }
             setError(err.message || 'Login failed');
+            setLoading(false);
+        }
+    };
+
+    const sendCode = async () => {
+        await resetPassword({ username: email });
+        setMode('reset');
+        setError('');
+        setInfo('We emailed you a 6-digit code.');
+    };
+
+    const handleForgot = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        try {
+            await sendCode();
+        } catch (err: any) {
+            setError(err.message || 'Could not send code');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleReset = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        try {
+            await confirmResetPassword({ username: email, confirmationCode: code, newPassword });
+            setMode('login');
+            setPassword('');
+            setCode('');
+            setNewPassword('');
+            setInfo('Password updated. Please sign in.');
+        } catch (err: any) {
+            setError(err.message || 'Could not reset password');
+        } finally {
             setLoading(false);
         }
     };
@@ -46,7 +134,7 @@ export default function AdminLogin() {
 
         try {
             await confirmSignIn({ challengeResponse: newPassword });
-            window.location.href = '/';
+            window.location.href = '/admin/dashboard';
         } catch (err: any) {
             setError(err.message || 'Failed to set new password');
             setLoading(false);
@@ -79,8 +167,41 @@ export default function AdminLogin() {
                     </p>
                 </div>
 
-                {!needsNewPassword ? (
+                {mode === 'forgot' ? (
+                    <form onSubmit={handleForgot} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', margin: 0 }}>
+                            Enter your email and we will send you a code to reset your password.
+                        </p>
+                        <input type="email" placeholder="Email" value={email}
+                            onChange={e => setEmail(e.target.value)} required style={fieldStyle} />
+                        {error && <p style={{ color: '#E74C3C', fontSize: '13px', margin: 0 }}>{error}</p>}
+                        <button type="submit" disabled={loading} style={primaryButtonStyle(loading)}>
+                            {loading ? 'Sending...' : 'Send code'}
+                        </button>
+                        <button type="button" style={linkButtonStyle}
+                            onClick={() => { setMode('login'); setError(''); setInfo(''); }}>
+                            Back to sign in
+                        </button>
+                    </form>
+                ) : mode === 'reset' ? (
+                    <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {info && <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', margin: 0 }}>{info}</p>}
+                        <input type="text" inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code"
+                            value={code} onChange={e => setCode(e.target.value.trim())} required style={fieldStyle} />
+                        <input type="password" autoComplete="new-password" placeholder="New password"
+                            value={newPassword} onChange={e => setNewPassword(e.target.value)} required style={fieldStyle} />
+                        {error && <p style={{ color: '#E74C3C', fontSize: '13px', margin: 0 }}>{error}</p>}
+                        <button type="submit" disabled={loading} style={primaryButtonStyle(loading)}>
+                            {loading ? 'Resetting...' : 'Reset password'}
+                        </button>
+                        <button type="button" style={linkButtonStyle}
+                            onClick={() => { setMode('login'); setError(''); setInfo(''); }}>
+                            Back to sign in
+                        </button>
+                    </form>
+                ) : !needsNewPassword ? (
                     <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {info && <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', margin: 0 }}>{info}</p>}
                         <input
                             type="email"
                             placeholder="Email"
@@ -131,6 +252,10 @@ export default function AdminLogin() {
                                 opacity: loading ? 0.7 : 1,
                             }}>
                             {loading ? 'Signing in...' : 'Sign In'}
+                        </button>
+                        <button type="button" style={linkButtonStyle}
+                            onClick={() => { setMode('forgot'); setError(''); setInfo(''); }}>
+                            Forgot password?
                         </button>
                     </form>
                 ) : (
