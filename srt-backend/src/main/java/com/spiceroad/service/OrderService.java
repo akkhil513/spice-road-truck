@@ -115,6 +115,13 @@ public class OrderService {
             throw new NotFoundException("Order not found");
         }
         OrderStatus from = OrderStatus.parse(current.getStatus());
+        if (next == OrderStatus.HELD) {
+            throw new BadRequestException("Use the counter routes to hold an order");
+        }
+        if (current.getSource() != null && current.getSentToKitchenAt() == null) {
+            throw new ClientErrorException("This order has not been sent to the kitchen, use the counter routes",
+                    Response.Status.CONFLICT);
+        }
         if (!from.canMoveTo(next)) {
             throw new ClientErrorException("Order is " + from + " and cannot move to " + next, Response.Status.CONFLICT);
         }

@@ -55,3 +55,18 @@ JWT auth via Cognito; the authorizer is defined in template.yaml.
 - Order status follows the lines while open: all PENDING = NEW, all CLEARED = READY, anything else = PREPARING (`KitchenProgress`). Counter staff still mark COMPLETED at pickup via `PUT /orders/{sk}/status`, which does not touch item statuses.
 - Website orders (`source=ONLINE`) are sent to the kitchen when placed; orders created before P1.2 have no `sentToKitchenAt` and never appear in the kitchen list. Counter send/hold rules come in P1.3.
 - Two new JWT routes in `template.yaml` must be deployed before the new code is used.
+
+## Counter endpoints (P1.3)
+All under `/srt/v1/counter/orders`, JWT + `@RolesAllowed(admin, manager, staff)` (`CounterResource` -> `CounterService`). Rules are in the pure `CounterOrderPolicy`; every write is a conditional update on the state that was read (409 if someone else changed the order).
+- `POST /` create: body `{source: COUNTER|KIOSK, orderType: DINE_IN|TO_GO, tableNumber (dine-in only, 1-99), customerName (blank = "Walk-in"), customerPhone, items:[{id, quantity}]}`. Server prices it; saved NEW, UNPAID, NOT sent to the kitchen.
+- `GET /?state=open|past[&date=]` list (open uses `open-index` and includes held/unsent orders); `GET /{sk}` one order with full detail.
+- `PUT /{sk}/items` body `{orderVersion, items}`: only while unsent, NEW or HELD, and UNPAID; stale `orderVersion` = 409; bumps `orderVersion`.
+- `POST /{sk}/hold` (NEW -> HELD), `/resume` (HELD -> NEW), `/discard` (soft cancel to CANCELLED, unsent + unpaid only), `/send` body `{orderVersion}` (sets `sentToKitchenAt`; to-go may be unpaid, dine-in must be PAID; no items edits afterwards), `/pickup` (READY -> COMPLETED, closes the order).
+- Pickup uses COMPLETED (no separate PICKED_UP status). `HELD` is not final and stays in `open-index`.
+- The generic `PUT /orders/{sk}/status` now refuses HELD and orders that were never sent to the kitchen (counter orders must use the routes above).
+- Nine new JWT routes in `template.yaml` must be deployed before the new code is used (`./deploy.sh` does both).
+- Dine-in cannot be sent until payments exist (P1.5).
+
+## Decision: API definition
+- Routes stay as `AWS::ApiGatewayV2::Route` resources in `template.yaml` on the live `si` stack (switching an existing API to an imported OpenAPI body risks the routes and the CLI-made custom domain mapping).
+- When the real dev and prod stacks are created, move to an `openapi.yaml` pulled in with `Fn::Transform: AWS::Include` (needs `aws cloudformation package` in `deploy.sh`), and generate the Postman collection and UI client types from it.

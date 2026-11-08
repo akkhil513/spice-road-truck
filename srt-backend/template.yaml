@@ -251,6 +251,87 @@ Resources:
       AuthorizationType: JWT
       AuthorizerId: !Ref CognitoAuthorizer
 
+  PostCounterOrderRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /srt/v1/counter/orders'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  GetCounterOrdersRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'GET /srt/v1/counter/orders'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  GetCounterOrderRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'GET /srt/v1/counter/orders/{sk}'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  PutCounterOrderItemsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'PUT /srt/v1/counter/orders/{sk}/items'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  PostCounterOrderHoldRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /srt/v1/counter/orders/{sk}/hold'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  PostCounterOrderResumeRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /srt/v1/counter/orders/{sk}/resume'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  PostCounterOrderSendRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /srt/v1/counter/orders/{sk}/send'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  PostCounterOrderDiscardRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /srt/v1/counter/orders/{sk}/discard'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
+  PostCounterOrderPickupRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /srt/v1/counter/orders/{sk}/pickup'
+      Target: !Sub integrations/${LambdaIntegration}
+      AuthorizationType: JWT
+      AuthorizerId: !Ref CognitoAuthorizer
+
   ApiStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:

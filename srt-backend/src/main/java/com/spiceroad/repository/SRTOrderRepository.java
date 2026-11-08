@@ -199,4 +199,86 @@ public class SRTOrderRepository {
                 .build());
         return getOrder(sk);
     }
+
+    /**
+     * Moves an unsent order to a new status (hold, resume, send, discard) and bumps its version, in
+     * one write. It only happens if the order is still in {@code expectedStatus}, has the version
+     * that was read and has not been sent to the kitchen; otherwise it throws
+     * ConditionalCheckFailedException and nothing changes. {@code sentAt} is set when sending;
+     * {@code closing} removes the order from the open-index.
+     */
+    public SRTOrder transition(String sk, String expectedStatus, Integer seenVersion, String newStatus,
+                               String sentAt, boolean closing) throws ConditionalCheckFailedException {
+        Map<String, AttributeValue> values = new java.util.HashMap<>();
+        values.put(":expected", AttributeValue.builder().s(expectedStatus).build());
+        values.put(":new", AttributeValue.builder().s(newStatus).build());
+        values.put(":nextVer", AttributeValue.builder().n(String.valueOf(nextVersion(seenVersion))).build());
+        StringBuilder update = new StringBuilder("SET #st = :new, #ver = :nextVer");
+        if (sentAt != null) {
+            update.append(", sentToKitchenAt = :sent");
+            values.put(":sent", AttributeValue.builder().s(sentAt).build());
+        }
+        if (closing) {
+            update.append(" REMOVE gsiOpen");
+        }
+        String condition = "#st = :expected AND attribute_not_exists(sentToKitchenAt) AND "
+                + versionCondition(seenVersion, values);
+        dynamoDbClient.updateItem(UpdateItemRequest.builder()
+                .tableName(tables.table())
+                .key(orderKey(sk))
+                .updateExpression(update.toString())
+                .conditionExpression(condition)
+                .expressionAttributeNames(Map.of("#st", "status", "#ver", "orderVersion"))
+                .expressionAttributeValues(values)
+                .build());
+        return getOrder(sk);
+    }
+
+    /**
+     * Replaces the lines and totals of an unsent, unpaid NEW or HELD order and bumps its version.
+     * Throws ConditionalCheckFailedException if the order changed since it was read.
+     */
+    public SRTOrder replaceItems(String sk, Integer seenVersion, List<SRTOrder.OrderItem> items,
+                                 java.math.BigDecimal subtotal, java.math.BigDecimal tax,
+                                 java.math.BigDecimal total) throws ConditionalCheckFailedException {
+        Map<String, AttributeValue> values = new java.util.HashMap<>();
+        values.put(":items", DynamoDbConfig.itemsToAttributeValue(items));
+        values.put(":sub", AttributeValue.builder().n(subtotal.toPlainString()).build());
+        values.put(":tax", AttributeValue.builder().n(tax.toPlainString()).build());
+        values.put(":gt", AttributeValue.builder().n(total.toPlainString()).build());
+        values.put(":nextVer", AttributeValue.builder().n(String.valueOf(nextVersion(seenVersion))).build());
+        values.put(":new", AttributeValue.builder().s("NEW").build());
+        values.put(":held", AttributeValue.builder().s("HELD").build());
+        values.put(":unpaid", AttributeValue.builder().s("UNPAID").build());
+        String condition = "(#st = :new OR #st = :held) AND attribute_not_exists(sentToKitchenAt) AND #pay = :unpaid AND "
+                + versionCondition(seenVersion, values);
+        dynamoDbClient.updateItem(UpdateItemRequest.builder()
+                .tableName(tables.table())
+                .key(orderKey(sk))
+                .updateExpression("SET #items = :items, #sub = :sub, #tax = :tax, #gt = :gt, #ver = :nextVer")
+                .conditionExpression(condition)
+                .expressionAttributeNames(Map.of("#items", "items", "#sub", "subtotal", "#tax", "tax",
+                        "#gt", "grandTotal", "#ver", "orderVersion", "#st", "status", "#pay", "paymentStatus"))
+                .expressionAttributeValues(values)
+                .build());
+        return getOrder(sk);
+    }
+
+    private static Map<String, AttributeValue> orderKey(String sk) {
+        return Map.of("pk", AttributeValue.builder().s(ORDER_PK).build(),
+                "sk", AttributeValue.builder().s(sk).build());
+    }
+
+    private static int nextVersion(Integer seenVersion) {
+        return seenVersion == null ? 1 : seenVersion + 1;
+    }
+
+    /** Orders saved before versions existed have no attribute, so a null version means "absent". */
+    private static String versionCondition(Integer seenVersion, Map<String, AttributeValue> values) {
+        if (seenVersion == null) {
+            return "attribute_not_exists(#ver)";
+        }
+        values.put(":seenVer", AttributeValue.builder().n(String.valueOf(seenVersion)).build());
+        return "#ver = :seenVer";
+    }
 }

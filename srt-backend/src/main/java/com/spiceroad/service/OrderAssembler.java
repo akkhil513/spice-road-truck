@@ -62,6 +62,11 @@ public final class OrderAssembler {
         return order;
     }
 
+    /** Numbered, pending kitchen lines for an already priced order. */
+    public static List<OrderItem> toLines(PricingCalculator.PricedOrder priced) {
+        return getOrderItems(priced);
+    }
+
     @Nonnull
     private static List<OrderItem> getOrderItems(PricingCalculator.PricedOrder priced) {
         List<OrderItem> items = new ArrayList<>(priced.items().size());

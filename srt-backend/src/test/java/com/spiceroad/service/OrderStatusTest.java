@@ -29,4 +29,10 @@ class OrderStatusTest {
         assertFalse(OrderStatus.COMPLETED.canMoveTo(OrderStatus.NEW));
         assertFalse(OrderStatus.CANCELLED.canMoveTo(OrderStatus.READY));
     }
+
+    @Test
+    void heldIsNotFinal() {
+        assertEquals(OrderStatus.HELD, OrderStatus.parse("held"));
+        assertFalse(OrderStatus.HELD.isFinal());
+    }
 }

@@ -58,6 +58,15 @@ public class DynamoDbConfig {
                     .setter(OrderItem::setItemStatus))
             .build();
 
+    /** Order lines as a DynamoDB list, for conditional updates that replace the items. */
+    public static software.amazon.awssdk.services.dynamodb.model.AttributeValue itemsToAttributeValue(
+            java.util.List<OrderItem> items) {
+        return software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromL(items.stream()
+                .map(i -> software.amazon.awssdk.services.dynamodb.model.AttributeValue.fromM(
+                        ORDER_ITEM_SCHEMA.itemToMap(i, true)))
+                .toList());
+    }
+
     public static final TableSchema<SRTOrder> ORDER_TABLE_SCHEMA = StaticTableSchema.builder(SRTOrder.class)
             .newItemSupplier(SRTOrder::new)
             .addAttribute(String.class, a -> a.name("pk")
